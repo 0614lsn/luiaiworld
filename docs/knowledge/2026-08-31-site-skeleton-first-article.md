@@ -9,7 +9,7 @@
   - 超宽架构图缩到移动容器会让标签不可读；局部 64rem viewport 解决可读性，原生 fragment 导航补键盘访问。仅有 `tabindex` 不会自动提供 ArrowRight 行为。
   - 浏览器控制通道也要做对照实验。IAB 连普通链接都无法 Enter 激活时只能记通道不确定；换到有效 Edge 通道，并等待平滑滚动稳定后再读终态。
   - 官方顶层开源清单与固定仓库里的源码事实必须分层陈述；固定 commit 的深链仍要单独核对行锚。
-- **当前收尾状态**：`main` 已合并并同步 GitHub；本地 feature 分支仍保留待 5c 按 plan 清场。首次 npm 故障产生的两份可恢复隔离物位于系统 Temp，精确路径删除不在 plan 授权内，当前未删除且不影响仓库。
+- **当前收尾状态**：`main` 已合并并同步 GitHub；5c 已按 plan 删除本地 feature、`dist/` 与 `.astro/`，保留 `node_modules` 和远端 feature。首次 npm 故障产生的两份可恢复隔离物位于系统 Temp，精确路径删除不在 plan 授权内，已登记并保留，不影响仓库。
 
 ## 5c 收尾审计（清场前，2026-09-01）
 
@@ -41,3 +41,28 @@
 - 远端 `origin/feature/site-skeleton-first-article`：按 plan 保留。
 - 两份系统 Temp 隔离物、C3 visualization 截图、tracked 架构图、服务器加固脚本和任何远端资源。
 - 禁止 `git clean -fdX`、`git branch -D` 或其它 force / 宽泛清理。
+
+## 5c 收尾审计（清场后补报，2026-09-01）
+
+| 事实面 | 状态 | 最终证据与动作 |
+| --- | --- | --- |
+| 代码 | `changed-and-verified` | 清场后 `main=origin/main=94a0fd8...`（本补报 commit 的 parent）；Final `0964a0f9...` 仍为祖先，Final..main 的产品文件 diff 为空；远端 feature 保留在 report commit `cb4fec0...` |
+| 运行态 | `verified-current` | Final 主线 dev 冒烟为 200；PID 已停止，4321 listener 为 0；没有公网部署、GitHub Pages、deployment、workflow 或 release |
+| 文档 | `changed-and-verified` | development 仍精确只有 plan/report；README、connector、knowledge/INDEX、evolution 与本次 pre/post-clean 审计同源；无 TODO 或 closeout 伴生文件 |
+| 规则 | `verified-current` | 未修改 skill/rule；P1-01 提案继续 `status: 待审`，没有自动创建 playbook 或改 bundled Browser skill；README 五类命令均有运行证据 |
+| 记忆 | `changed-and-verified` | Final、合并、Minor、P1 提案、Temp 隔离物与清场结果都已进入仓库权威工件；transcript 不承载唯一事实 |
+| 工作区 | `changed-and-verified` | 本地 feature 已用 `git branch -d` 删除；`dist/`、`.astro/` 已按字面量绝对路径删除；`node_modules/`、远端 feature、系统 Temp 与 visualization 证据均按清单保留；worktree 数为 1，main 工作树干净 |
+
+### 实际清场结果
+
+- 已删除 `D:\MyProject\luiaiworld\dist`：清场前 10 个文件、1,862,336 bytes，可由构建重建。
+- 已删除 `D:\MyProject\luiaiworld\.astro`：最终清场前 10 个文件、66,099 bytes，可由 Astro 重建。
+- 已删除本地 `feature/site-skeleton-first-article`：使用非强制 `git branch -d`，删除前确认已 merge；远端同名 feature 仍为 `cb4fec03cd07d35af144a53339049bbd168b6376`。
+- 已保留 `node_modules`、两份 `%LOCALAPPDATA%\Temp` 取证副本和 `%USERPROFILE%\.codex\visualizations\...\c3-keyboard` 证据。
+- 复审：本地 feature 不存在；`dist/.astro` 不存在；`node_modules` 存在；worktree 数为 1；4321 listener 为 0；development 文件仅 plan/report；main 工作树干净。
+
+### 收尾后非阻断留档
+
+- evolution P1-01 的项目级浏览器键盘验证 playbook 提案仍待异步 review；这是正确的 5b 完成状态，不是产品待办。
+- report M1、M2 继续留档；若修复文章枚举或固定源码行锚，须另立需求并形成新 Candidate。
+- 两份系统 Temp 隔离物和 visualization 证据为 `out-of-scope` 保留项，已在本条目给出唯一恢复位置；没有未登记遗留。
