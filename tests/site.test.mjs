@@ -29,6 +29,12 @@ function attribute(html, selector) {
   return match[1];
 }
 
+function tagAttributes(tag) {
+  return Object.fromEntries(
+    [...tag.matchAll(/\s([:\w-]+)="([^"]*)"/g)].map((match) => [match[1], match[2]]),
+  );
+}
+
 function localTarget(urlPath) {
   const clean = urlPath.split(/[?#]/, 1)[0];
   if (clean.endsWith('/')) return join(dist, clean.slice(1), 'index.html');
@@ -97,7 +103,7 @@ test('every route has unique SEO metadata and the article has publication metada
   assert.match(articleHtml, /<meta property="article:published_time" content="2026-08-31T/);
 });
 
-test('built pages retain semantic accessibility and all three optimized diagrams', () => {
+test('built pages retain semantic accessibility landmarks', () => {
   for (const [route, relativePath] of routes) {
     const html = read(relativePath);
     assert.match(html, /<html lang="zh-CN">/, `${route} missing language`);
@@ -107,25 +113,103 @@ test('built pages retain semantic accessibility and all three optimized diagrams
     assert.match(html, /<main id="main-content" tabindex="-1">/, `${route} missing main landmark`);
     assert.match(html, /<footer class="site-footer">/, `${route} missing footer`);
   }
+});
 
+test('built diagram navigation structure is complete; native fragment scrolling remains a browser regression', () => {
   const articleHtml = read(routes.get('/articles/codex-harness-beyond-model/'));
-  const diagramViewports = [...articleHtml.matchAll(/<span\b[^>]*class="diagram-viewport"[^>]*>[\s\S]*?<\/span>/g)]
-    .map((match) => match[0]);
+  const navigationBlocks = [...articleHtml.matchAll(
+    /<nav\b[^>]*\bclass="[^"]*\bdiagram-nav\b[^"]*"[^>]*>[\s\S]*?<\/nav>/g,
+  )].map((match) => match[0]);
+  const viewportBlocks = [...articleHtml.matchAll(
+    /<span\b[^>]*\bclass="[^"]*\bdiagram-viewport\b[^"]*"[^>]*>\s*<span\b[^>]*\bclass="[^"]*\bdiagram-canvas\b[^"]*"[^>]*>[\s\S]*?<\/span>\s*<\/span>/g,
+  )].map((match) => match[0]);
 
-  assert.equal(diagramViewports.length, 3, 'article must render three local diagram viewports');
-  for (const viewport of diagramViewports) {
-    const openingTag = viewport.match(/^<span\b[^>]*>/)[0];
-    const image = viewport.match(/<img\b[^>]*>/)?.[0];
+  assert.equal(navigationBlocks.length, 3, 'article must render three native diagram navigations');
+  assert.equal(viewportBlocks.length, 3, 'article must render three local diagram viewports');
 
-    assert.match(openingTag, /tabindex="0"/);
-    assert.match(openingTag, /role="region"/);
-    assert.match(openingTag, /aria-label="[^"]*方向键[^"]*"/);
-    assert.ok(image, 'diagram viewport must retain its image');
+  const viewports = new Map();
+  const targets = new Map();
+  const expectedPositions = ['left', 'middle', 'right'];
+
+  for (const block of viewportBlocks) {
+    const viewportTag = block.match(/^<span\b[^>]*>/)?.[0];
+    const canvasTag = block.match(/<span\b[^>]*\bclass="[^"]*\bdiagram-canvas\b[^"]*"[^>]*>/)?.[0];
+    const image = block.match(/<img\b[^>]*>/)?.[0];
+    assert.ok(viewportTag && canvasTag, 'diagram viewport must contain its named canvas');
+
+    const viewportAttributes = tagAttributes(viewportTag);
+    const canvasAttributes = tagAttributes(canvasTag);
+    const diagram = viewportAttributes['data-diagram'];
+    assert.ok(diagram, 'diagram viewport must have a stable association key');
+    assert.equal(viewports.has(diagram), false, `duplicate viewport association ${diagram}`);
+    assert.equal(viewportAttributes.id, `diagram-${diagram}-viewport`);
+    assert.equal(viewportAttributes.tabindex, '0');
+    assert.equal(viewportAttributes.role, 'region');
+    assert.match(viewportAttributes['aria-label'], /触摸横向浏览/);
+    assert.doesNotMatch(viewportAttributes['aria-label'], /方向键/);
+    assert.equal(canvasAttributes['data-diagram'], diagram);
+    assert.ok(image, 'diagram viewport must retain its optimized image');
     assert.match(image, /alt="[^"]+"/);
     assert.match(image, /src="\/_astro\/[^"]+"/);
     assert.match(image, /width="\d+"/);
     assert.match(image, /height="\d+"/);
+
+    const targetTags = [...block.matchAll(
+      /<a\b[^>]*\bclass="[^"]*\bdiagram-target\b[^"]*"[^>]*>[^<]+<\/a>/g,
+    )].map((match) => match[0]);
+    assert.equal(targetTags.length, 3, `${diagram} viewport must contain three visible fragment targets`);
+
+    const targetPositions = targetTags.map((tag) => {
+      const attributes = tagAttributes(tag);
+      const position = attributes['data-position'];
+      assert.match(tag, new RegExp(`\\bdiagram-target--${position}\\b`));
+      assert.match(tag, />[左中右]<\/a>$/);
+      assert.ok(attributes.id, `${diagram} ${position} target must have an id`);
+      assert.equal(targets.has(attributes.id), false, `duplicate fragment target ${attributes.id}`);
+      targets.set(attributes.id, { diagram, position, viewportId: viewportAttributes.id });
+      return position;
+    });
+    assert.deepEqual(targetPositions, expectedPositions, `${diagram} targets must remain left-to-right ordered`);
+    viewports.set(diagram, viewportAttributes.id);
   }
+
+  assert.equal(targets.size, 9, 'article must render nine unique fragment targets');
+
+  const referencedTargets = new Set();
+  for (const block of navigationBlocks) {
+    const navigationTag = block.match(/^<nav\b[^>]*>/)?.[0];
+    assert.ok(navigationTag, 'diagram navigation must have an opening tag');
+    const navigationAttributes = tagAttributes(navigationTag);
+    const diagram = navigationAttributes['data-diagram'];
+    const viewportId = viewports.get(diagram);
+    assert.ok(viewportId, `navigation ${diagram} must have a matching viewport`);
+    assert.match(navigationAttributes['aria-label'], /局部导航/);
+    assert.equal(navigationAttributes['aria-controls'], viewportId);
+    assert.match(block, /触摸横滑，或用 Tab 选择后按 Enter 定位/);
+    assert.doesNotMatch(block, /方向键/);
+
+    const controlTags = [...block.matchAll(/<a\b[^>]*>[^<]+<\/a>/g)].map((match) => match[0]);
+    assert.equal(controlTags.length, 3, `${diagram} navigation must contain three native links`);
+    assert.deepEqual(
+      controlTags.map((tag) => tagAttributes(tag)['data-position']),
+      expectedPositions,
+      `${diagram} controls must remain left-to-right ordered`,
+    );
+
+    for (const tag of controlTags) {
+      const attributes = tagAttributes(tag);
+      const targetId = attributes.href?.slice(1);
+      const target = targets.get(targetId);
+      assert.ok(target, `${diagram} navigation contains orphan fragment ${attributes.href}`);
+      assert.equal(attributes['aria-controls'], viewportId);
+      assert.equal(target.diagram, diagram);
+      assert.equal(target.position, attributes['data-position']);
+      assert.equal(target.viewportId, viewportId);
+      referencedTargets.add(targetId);
+    }
+  }
+
+  assert.equal(referencedTargets.size, targets.size, 'every fragment target must have one navigation reference');
 });
 
 test('output remains static, self-contained and low-bandwidth aware', () => {
@@ -148,7 +232,9 @@ test('output remains static, self-contained and low-bandwidth aware', () => {
   assert.doesNotMatch(css, /body\s*\{[^}]*overflow-x\s*:\s*hidden/s);
   assert.match(css, /\.diagram-viewport\s*\{[^}]*overflow-x:\s*auto/s);
   assert.match(css, /\.diagram-viewport:focus-visible\s*\{/);
-  assert.match(css, /@media \(max-width: 760px\)[\s\S]*\.diagram-viewport img\s*\{[^}]*min-width:\s*64rem/s);
+  assert.match(css, /\.diagram-nav\s*\{/);
+  assert.match(css, /\.diagram-target:target\s*\{/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*\.diagram-canvas\s*\{[^}]*min-width:\s*64rem/s);
 
   const paper = cssCustomProperty(css, '--paper');
   const red = cssCustomProperty(css, '--red');

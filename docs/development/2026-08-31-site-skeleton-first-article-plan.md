@@ -223,7 +223,7 @@
 
 ### Task F2 — C2 键盘图示导航修复（串行，合同内验证修复）
 
-- [ ] 未开始
+- [x] 实现完成（2026-09-01；无 JS 的 3 组原生 fragment 导航、9 个唯一图内 target 与结构回归已落地，自测 11/11；原生 click 已使局部 `scrollLeft` 变化，但自动化 Enter concern 明确保留，AC3 是否关闭由 fresh C3 浏览器 tester 裁决）
 - **触发证据**：Candidate C2 `a5a000496a33192dde53c7373a72e3ff549880d2`；T1 确认三处 viewport 可触摸横滑且标签可读，但 focus 后 ArrowRight/End 均 `scrollLeft 0→0`；C2 whole-branch review 将“用 tabindex 冒充键盘动作”定为 1 个 Important。
 - **目标**：在无客户端 JS、无新依赖前提下，为每张图提供浏览器原生、可见、可键盘激活的左／中／右局部导航，关闭 AC3 最后一个阻断项。
 - **文件集**：

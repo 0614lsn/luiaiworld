@@ -52,7 +52,9 @@ sourceBaseline: "d52478c52ef09f001142a4b82339467c3880877f"
 
 先看第一张图。
 
-<span class="diagram-viewport" tabindex="0" role="region" aria-label="Codex harness 系统总架构。可左右滑动或使用方向键查看完整图示">![Codex harness 系统总架构，展示体验与集成层、协议与适配层、Core harness、模型服务、工具执行和持久化边界](../../assets/codex-architecture/01-system-context.png)</span>
+<nav class="diagram-nav" data-diagram="system" aria-label="Codex harness 系统总架构图局部导航" aria-controls="diagram-system-viewport"><span class="diagram-nav__hint">触摸横滑，或用 Tab 选择后按 Enter 定位</span><a href="#diagram-system-left" data-position="left" aria-controls="diagram-system-viewport">左</a><a href="#diagram-system-middle" data-position="middle" aria-controls="diagram-system-viewport">中</a><a href="#diagram-system-right" data-position="right" aria-controls="diagram-system-viewport">右</a></nav>
+
+<span class="diagram-viewport" id="diagram-system-viewport" data-diagram="system" tabindex="0" role="region" aria-label="Codex harness 系统总架构图，可触摸横向浏览，或使用上方链接定位"><span class="diagram-canvas" data-diagram="system"><a class="diagram-target diagram-target--left" id="diagram-system-left" data-position="left" aria-label="系统总架构图左侧定位点">左</a><a class="diagram-target diagram-target--middle" id="diagram-system-middle" data-position="middle" aria-label="系统总架构图中部定位点">中</a><a class="diagram-target diagram-target--right" id="diagram-system-right" data-position="right" aria-label="系统总架构图右侧定位点">右</a>![Codex harness 系统总架构，展示体验与集成层、协议与适配层、Core harness、模型服务、工具执行和持久化边界](../../assets/codex-architecture/01-system-context.png)</span></span>
 
 图看着很大，但主线其实只有一条。客户端把控制请求送进去，Core 接管线程与 turn，模型和工具在循环中协作，运行状态再通过事件流回到客户端。旁边的持久化系统把真正需要恢复的东西留下来。
 
@@ -88,7 +90,9 @@ sourceBaseline: "d52478c52ef09f001142a4b82339467c3880877f"
 
 再看第二张图，真正的循环在这里露出来了。
 
-<span class="diagram-viewport" tabindex="0" role="region" aria-label="一次 Codex turn 的循环。可左右滑动或使用方向键查看完整图示">![一次 Codex turn 的循环，展示 turn 请求、StepContext、模型响应、工具回填、上下文压缩与完成事件](../../assets/codex-architecture/02-turn-loop.png)</span>
+<nav class="diagram-nav" data-diagram="loop" aria-label="一次 Codex turn 循环图局部导航" aria-controls="diagram-loop-viewport"><span class="diagram-nav__hint">触摸横滑，或用 Tab 选择后按 Enter 定位</span><a href="#diagram-loop-left" data-position="left" aria-controls="diagram-loop-viewport">左</a><a href="#diagram-loop-middle" data-position="middle" aria-controls="diagram-loop-viewport">中</a><a href="#diagram-loop-right" data-position="right" aria-controls="diagram-loop-viewport">右</a></nav>
+
+<span class="diagram-viewport" id="diagram-loop-viewport" data-diagram="loop" tabindex="0" role="region" aria-label="一次 Codex turn 循环图，可触摸横向浏览，或使用上方链接定位"><span class="diagram-canvas" data-diagram="loop"><a class="diagram-target diagram-target--left" id="diagram-loop-left" data-position="left" aria-label="Codex turn 循环图左侧定位点">左</a><a class="diagram-target diagram-target--middle" id="diagram-loop-middle" data-position="middle" aria-label="Codex turn 循环图中部定位点">中</a><a class="diagram-target diagram-target--right" id="diagram-loop-right" data-position="right" aria-label="Codex turn 循环图右侧定位点">右</a>![一次 Codex turn 的循环，展示 turn 请求、StepContext、模型响应、工具回填、上下文压缩与完成事件](../../assets/codex-architecture/02-turn-loop.png)</span></span>
 
 一条普通路径可以压成下面这样。
 
@@ -162,7 +166,9 @@ Codex 同时维护运行时状态、模型可见状态和持久化状态。当�
 
 接着看第三张图。
 
-<span class="diagram-viewport" tabindex="0" role="region" aria-label="Codex 工具安全链路。可左右滑动或使用方向键查看完整图示">![Codex 工具安全链路，展示 ToolRegistry、执行规则、审批来源、SandboxManager、权限升级与 App Server 往返](../../assets/codex-architecture/03-tool-approval-sandbox.png)</span>
+<nav class="diagram-nav" data-diagram="safety" aria-label="Codex 工具安全链路图局部导航" aria-controls="diagram-safety-viewport"><span class="diagram-nav__hint">触摸横滑，或用 Tab 选择后按 Enter 定位</span><a href="#diagram-safety-left" data-position="left" aria-controls="diagram-safety-viewport">左</a><a href="#diagram-safety-middle" data-position="middle" aria-controls="diagram-safety-viewport">中</a><a href="#diagram-safety-right" data-position="right" aria-controls="diagram-safety-viewport">右</a></nav>
+
+<span class="diagram-viewport" id="diagram-safety-viewport" data-diagram="safety" tabindex="0" role="region" aria-label="Codex 工具安全链路图，可触摸横向浏览，或使用上方链接定位"><span class="diagram-canvas" data-diagram="safety"><a class="diagram-target diagram-target--left" id="diagram-safety-left" data-position="left" aria-label="工具安全链路图左侧定位点">左</a><a class="diagram-target diagram-target--middle" id="diagram-safety-middle" data-position="middle" aria-label="工具安全链路图中部定位点">中</a><a class="diagram-target diagram-target--right" id="diagram-safety-right" data-position="right" aria-label="工具安全链路图右侧定位点">右</a>![Codex 工具安全链路，展示 ToolRegistry、执行规则、审批来源、SandboxManager、权限升级与 App Server 往返](../../assets/codex-architecture/03-tool-approval-sandbox.png)</span></span>
 
 安全很容易被压成一个开关，要么允许，要么禁止。源码不是这么做的。
 

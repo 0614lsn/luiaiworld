@@ -553,10 +553,44 @@ main {
   margin: 0;
 }
 
+.diagram-nav {
+  display: flex;
+  width: min(1180px, calc(100vw - 2rem));
+  margin: 4rem 50% 0;
+  border: 1px solid var(--ink);
+  background: var(--paper-light);
+  transform: translateX(-50%);
+}
+
+.diagram-nav__hint {
+  flex: 1 1 auto;
+  padding: 0.7rem 0.9rem;
+  color: var(--ink-soft);
+  font: 700 0.72rem/1.5 var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.diagram-nav a {
+  display: grid;
+  flex: 0 0 3.4rem;
+  place-items: center;
+  border-left: 1px solid var(--ink);
+  color: var(--ink);
+  background: var(--paper);
+  font: 700 0.76rem/1 var(--mono);
+  text-decoration: none;
+  overflow-wrap: normal;
+}
+
+.diagram-nav a:hover {
+  color: var(--paper-light);
+  background: var(--blue);
+}
+
 .diagram-viewport {
   display: block;
   width: min(1180px, calc(100vw - 2rem));
-  margin: 4rem 50%;
+  margin: 0 50% 4rem;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-gutter: stable;
@@ -564,20 +598,55 @@ main {
   transform: translateX(-50%);
 }
 
-.diagram-viewport::before {
-  display: none;
-  color: var(--ink-soft);
-  content: '图示可左右滑动，也可聚焦后使用方向键查看';
-  font: 700 0.72rem/1.4 var(--mono);
-  letter-spacing: 0.04em;
-}
-
 .diagram-viewport:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 4px;
 }
 
-.diagram-viewport img {
+.diagram-canvas {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+}
+
+.diagram-target {
+  z-index: 1;
+  grid-row: 1;
+  align-self: start;
+  width: max-content;
+  margin: 0.65rem;
+  padding: 0.2rem 0.48rem;
+  color: var(--paper-light);
+  background: var(--ink);
+  font: 700 0.68rem/1.35 var(--mono);
+  text-decoration: none;
+  scroll-margin-inline: 1rem;
+}
+
+.diagram-target--left {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.diagram-target--middle {
+  grid-column: 2;
+  justify-self: center;
+}
+
+.diagram-target--right {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.diagram-target:target {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.diagram-canvas img {
+  grid-row: 1;
+  grid-column: 1 / -1;
   width: 100%;
   height: auto;
   border: 1px solid var(--ink);
@@ -770,21 +839,30 @@ main {
     padding-block: 4rem;
   }
 
+  .diagram-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 2.6rem;
+  }
+
+  .diagram-nav__hint {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .diagram-nav a {
+    min-height: 2.6rem;
+  }
+
+  .diagram-nav a:first-of-type {
+    border-left: 0;
+  }
+
   .diagram-viewport {
-    margin-block: 2.6rem;
+    margin-bottom: 2.6rem;
   }
 
-  .diagram-viewport::before {
-    position: sticky;
-    left: 0;
-    display: block;
-    width: max-content;
-    max-width: 100%;
-    padding: 0 0 0.55rem;
-    background: var(--paper);
-  }
-
-  .diagram-viewport img {
+  .diagram-canvas {
     min-width: 64rem;
   }
 
