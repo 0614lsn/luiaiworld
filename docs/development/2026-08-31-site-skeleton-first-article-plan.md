@@ -200,7 +200,7 @@
 
 ### Task F1 — C1 阻断项修复（串行，合同内验证修复）
 
-- [x] 已完成（2026-09-01；C1 的移动图 FAIL 与 reviewer I1–I3 已完成合同内修复，自测 10/10 通过；原子修复 commit 与 C2 SHA 由主控提交后回读记录）
+- [x] 已完成（2026-09-01；原子修复 commit 形成 C2；C2 证据确认图片尺寸、触摸浏览、来源归因与颜色对比度关闭，但通用可聚焦容器未提供可靠方向键动作，键盘子项重新进入 Task F2）
 - **触发证据**：Candidate C1 `7bee2c5584223fa69a67371a3376368e0ba555fe`；T1 唯一 FAIL 为 390×844 三张架构图标签不可读；C1 whole-branch review 另报 2 个 Important：官方开源清单归因粒度写宽、朱红小字号文本对比度约 3.67:1。
 - **目标**：关闭 C1 的 1 个测试 FAIL 与 3 个 Important，不扩大站点功能或依赖范围。
 - **文件集**：
@@ -220,6 +220,29 @@
   3. 正常字号朱红文字在实际暖纸背景上的对比度至少 4.5:1，仍保留朱红点色；新增机械断言覆盖颜色/局部图示视口结构，但不得把结构断言冒充真实移动可读性测试。
   4. `npm run check`、`npm run build`、`npm test` 全部退出码 0；文章仍为 4000–8000 中文字符、0 Markdown 小标题、L1 零命中，三张图与事实基线保留。
   5. `git status --short` 只出现本 Task 实际需要的上述文件；不修改 plan checkbox、不 commit、不 push。
+
+### Task F2 — C2 键盘图示导航修复（串行，合同内验证修复）
+
+- [ ] 未开始
+- **触发证据**：Candidate C2 `a5a000496a33192dde53c7373a72e3ff549880d2`；T1 确认三处 viewport 可触摸横滑且标签可读，但 focus 后 ArrowRight/End 均 `scrollLeft 0→0`；C2 whole-branch review 将“用 tabindex 冒充键盘动作”定为 1 个 Important。
+- **目标**：在无客户端 JS、无新依赖前提下，为每张图提供浏览器原生、可见、可键盘激活的左／中／右局部导航，关闭 AC3 最后一个阻断项。
+- **文件集**：
+  - `src/content/articles/codex-harness-beyond-model.md`
+  - `src/styles/global.css`
+  - `tests/site.test.mjs`
+  - `tests/content.test.mjs`（仅在可见导航文字影响 prose 口径时修改）
+- **执行模式**：串行；由未参与 C2 测试或 review 的独立 implementer 执行。
+- **隔离位置**：`D:\MyProject\luiaiworld` feature worktree。
+- **task 分支**：`feature/site-skeleton-first-article`。
+- **集成顺序**：序号 4；完成后冻结新 Candidate C3。
+- **冲突处置**：需要客户端 JS、依赖、layout/schema/page 文件或放宽 AC3 时立即报 `NEEDS_CONTEXT`；不得继续宣称不存在的方向键行为，不得用全页横滚或 `body overflow-x:hidden`。
+- **完成判据**：
+  1. 每张图都有一组可见、语义命名且可 Tab 聚焦的原生左／中／右导航链接；每个链接指向该图宽画布内唯一、非隐藏的 fragment target，三组 ID 互不冲突。
+  2. 390×844 下以 Enter 激活左／中／右链接后，对应图示 viewport 的 `scrollLeft` 呈左＜中＜右有序位置，目标标签进入视口；其他图示与页面根横向位置不受影响。触摸横滑、可见 focus、alt、局部 overflow 与桌面布局继续成立。
+  3. 删除 aria-label / 可见提示中的“方向键自动滚动”承诺，改为与真实 Tab+Enter/触摸行为一致；`aria-controls` 只作关联，不冒充动作实现。
+  4. Node 结构测试覆盖三组导航、9 个唯一 target、href/target/viewport 关联和无孤儿 fragment；测试文字明确不把结构断言冒充真实浏览器滚动。
+  5. `npm run check`、`npm run build`、`npm test` 全部退出码 0；文章仍为 4000–8000 中文字符、0 Markdown 小标题、L1 零命中，C2 已关闭的来源归因、对比度与静态输出不退化。
+  6. `git status --short` 只出现本 Task 实际修改文件；不修改 plan checkbox、不 commit、不 push。
 
 ## 7. 外部工具入口 dry-run sanity
 
