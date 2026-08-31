@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="页面未找到"
+  description="这个页面不存在，返回 LUI AI WORLD 首页继续浏览。"
+  canonicalPath="/404.html"
+>
+  <section class="not-found page-grid">
+    <p class="not-found__code" aria-hidden="true">404</p>
+    <div>
+      <p class="eyebrow">ROUTE NOT FOUND</p>
+      <h1>这一页，<br />还没有被写出来。</h1>
+      <p>地址可能已经变化，也可能只是多敲了一个字符。</p>
+      <a class="hero-link" href="/">返回首页 <span aria-hidden="true">↗</span></a>
+    </div>
+  </section>
+</BaseLayout>

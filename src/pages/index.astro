@@ -1,0 +1,63 @@
+---
+import { getCollection } from 'astro:content';
+import ArticleCard from '../components/ArticleCard.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const articles = (await getCollection('articles')).sort(
+  (a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf(),
+);
+const featured = articles.find((article) => article.data.featured);
+
+if (!featured) {
+  throw new Error('首页需要至少一篇精选文章');
+}
+---
+
+<BaseLayout
+  title="LUI AI WORLD"
+  description="路易的 AI 新世界，记录 AI 工程、源码阅读与真实实践。"
+  canonicalPath="/"
+>
+  <section class="home-hero page-grid" aria-labelledby="home-title">
+    <div class="home-hero__rail">
+      <span>ISSUE 001</span>
+      <span>AI × ENGINEERING</span>
+    </div>
+    <div class="home-hero__copy">
+      <p class="eyebrow">A PERSONAL FIELD JOURNAL</p>
+      <h1 id="home-title">路易的<br /><em>AI 新世界</em></h1>
+      <p>
+        不追赶每一条喧闹的消息。沿着源码、系统和真实项目，弄清智能怎样落进现实。
+      </p>
+      <a class="hero-link" href={`/articles/${featured.id}/`}>
+        阅读首篇文章 <span aria-hidden="true">↗</span>
+      </a>
+    </div>
+    <aside class="home-hero__manifesto" aria-label="本站关注方向">
+      <span>001</span>
+      <p>模型给出可能性</p>
+      <span>002</span>
+      <p>工程把可能性变成结果</p>
+      <span>003</span>
+      <p>源码让判断经得起追问</p>
+    </aside>
+  </section>
+
+  <section class="featured-section" aria-labelledby="featured-title">
+    <div class="section-heading">
+      <p class="eyebrow">FEATURED / 精选</p>
+      <h2 id="featured-title">从一行调用，走进一套运行时</h2>
+    </div>
+    <ArticleCard article={featured} index={1} />
+  </section>
+
+  <section class="home-notes page-grid" aria-labelledby="notes-title">
+    <div class="home-notes__title">
+      <p class="eyebrow">EDITORIAL NOTE</p>
+      <h2 id="notes-title">这里写什么</h2>
+    </div>
+    <p>
+      这里会留下可复查的阅读笔记、搭建过程与阶段判断。观点可以变化，证据要能找到，边界要讲清楚。
+    </p>
+  </section>
+</BaseLayout>
