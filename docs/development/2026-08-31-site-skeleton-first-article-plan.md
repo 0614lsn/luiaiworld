@@ -1,6 +1,6 @@
 # 站点骨架与首篇 Codex 架构文章 — 实施 plan
 
-> 状态：待审核
+> 状态：已获批准（2026-08-31，Codex 当前会话；批准原文：`批准 plan，进入阶段 2`）
 > 仓库：`D:\MyProject\luiaiworld`；分支 `feature/site-skeleton-first-article`；无远端，不 push，终审通过后仅本地合并到 `main`
 > Base：`4b28bcd2ffebd0cc7015ca33c6bb3132defd8b45`
 
