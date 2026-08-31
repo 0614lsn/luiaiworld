@@ -131,7 +131,7 @@
 
 ### Task G — GitHub 公开仓库与连接器初始化（串行，Task 1 前）
 
-- [ ] 未开始
+- [x] 已完成（2026-08-31；公开仓库、`origin`、默认分支、全历史安全扫描与初始 main/feature refs 均已回读验证）
 - **目标**：创建唯一目标公开仓库，建立 `origin`，安全同步 `main` 与 feature，并把连接器从 planned 更新为 active。
 - **外部对象**：`github.com/0614lsn/luiaiworld`，visibility `PUBLIC`；不得操作其他仓库。
 - **文件集（execution subagent 不写；主控收口时允许回写）**：

@@ -1,6 +1,6 @@
 # 外部资源连接器
 
-> 状态：planned（等待 `2026-08-31-site-skeleton-first-article-plan.md` Contract change 重新批准）
+> 状态：active（2026-08-31；Contract change 已批准；公开仓库、`origin`、默认分支与初始 refs 已回读验证）
 
 ## 作用域（硬限制）
 
@@ -14,7 +14,7 @@
 - 本地仓库：`D:\MyProject\luiaiworld`。
 - 主线：`main`。
 - 集成分支：`feature/site-skeleton-first-article`。
-- 计划远端：`origin=https://github.com/0614lsn/luiaiworld.git`。
+- 活动远端：`origin=https://github.com/0614lsn/luiaiworld.git`。
 - push 纪律：只允许 fast-forward push；禁止 force push、history rewrite、未知远端合并和远端删除。
 - 阶段 2/3：原子 commit 收口后串行同步 feature，Candidate 冻结前核对本地/远端 SHA。
 - 阶段 4：自动终审四条件满足后，本地 `--no-ff` 合并并 push `main`。
@@ -26,7 +26,8 @@
 
 - 单一通道：GitHub CLI `gh`，Git 操作使用 HTTPS `origin`。
 - 认证来源：系统 keyring 中的既有 `gh` 登录态；不读取、不打印、不复制 token，不把凭证放进命令、日志或仓库。
-- 2026-08-31 sanity：`gh 2.98.0`；active account `0614lsn`；目标仓库 `NOT_FOUND`。
+- 2026-08-31 创建前 sanity：`gh 2.98.0`；active account `0614lsn`；目标仓库 `NOT_FOUND`。
+- 2026-08-31 创建后核验：仓库 `0614lsn/luiaiworld` 为 `PUBLIC`，description/homepage 符合 plan，默认分支 `main`；本地 `main` 与 feature 初始 refs 已 fast-forward push 并回读一致。
 - 外部写操作只按已重新批准的 LDP plan 预授权清单执行；同名仓库竞态、账号变化、非 fast-forward 或敏感扫描命中时立即停止。
 
 ## 文档
