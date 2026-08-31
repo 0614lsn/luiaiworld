@@ -10,3 +10,34 @@
   - 浏览器控制通道也要做对照实验。IAB 连普通链接都无法 Enter 激活时只能记通道不确定；换到有效 Edge 通道，并等待平滑滚动稳定后再读终态。
   - 官方顶层开源清单与固定仓库里的源码事实必须分层陈述；固定 commit 的深链仍要单独核对行锚。
 - **当前收尾状态**：`main` 已合并并同步 GitHub；本地 feature 分支仍保留待 5c 按 plan 清场。首次 npm 故障产生的两份可恢复隔离物位于系统 Temp，精确路径删除不在 plan 授权内，当前未删除且不影响仓库。
+
+## 5c 收尾审计（清场前，2026-09-01）
+
+| 事实面 | 状态 | 证据与动作 / 未闭合原因 |
+| --- | --- | --- |
+| 代码 | `changed-and-verified` | Final `0964a0f9...`、report `cb4fec0...`、merge `079ae17...`；当前 `main=origin/main=4ada704...`，Final 后产品 diff 为零；本地 feature 已 merge，待按清单删除 |
+| 运行态 | `verified-current` | 4321 无 listener；无相关 Node/Astro 进程；GitHub Pages、deployment、workflow、release 均未创建；Final 主线执行 `npm run dev -- --host 127.0.0.1 --port 4321` 后首页与文章路由均为 200，PID 已停止 |
+| 文档 | `pending` | `docs/development/` 只有 plan/report；connector active；README、knowledge/INDEX、evolution 权威关系一致；本节已落盘清场前事实，仍待清场后补报 |
+| 规则 | `verified-current` | 本需求未修改 SKILL、AGENTS 或 rule；P1 提案保持 `status: 待审`，未当作采纳；README 的 `npm ci`、dev、check、build、preview 均有实际运行证据 |
+| 记忆 | `changed-and-verified` | Final、合并、两个 Minor、P1 待审提案和下述外部 Temp 精确事实均已进入仓库工件，不依赖 transcript 作为唯一事实 |
+| 工作区 | `pending` | 仅一个 worktree，当前 main 干净；本地 feature、`dist/`、`.astro/` 待清理；`node_modules/` 按 plan 保留 |
+
+### 外部遗留（已登记，不在删除授权内）
+
+- `%LOCALAPPDATA%\Temp\luiaiworld-node-modules-incomplete-f720c26447eb437ebdf45618ef15a122`：中断 npm 安装的可恢复现场，12,448 个文件、1,312 个目录、150,801,213 bytes；位于仓库 / workspace 外，保留。
+- `%LOCALAPPDATA%\Temp\luiaiworld-package-lock-invalid-d7afda9b9c4b43468acc47de5d786770.json`：畸形 lock 取证副本，119,088 bytes，SHA-256 `5FC9E41457C28B3B04BF46C5BB8EFEE23ABD3863D0A112C0DBD68C017F846421`；318 个 package 条目中 11 个缺 `version`，当前正式 lock 为 363 条且零缺失；保留。
+- `%USERPROFILE%\.codex\visualizations\2026\08\31\01a05771-b21f-7092-b808-377ce9033349\c3-keyboard`：11 张 C3 键盘测试截图、479,131 bytes；测试证据且无删除授权，保留。
+
+### 已落盘拟删清单
+
+1. 本地 `feature/site-skeleton-first-article`：已 merge，远端 feature `cb4fec0...` 保留；仅使用非强制 `git branch -d`。
+2. `D:\MyProject\luiaiworld\dist`：10 个文件、1,862,336 bytes；ignored 构建 / 测试产物，可由 `npm run build` 重建。
+3. `D:\MyProject\luiaiworld\.astro`：9 个文件、55,123 bytes；ignored Astro 缓存，可重建。
+4. preview 日志：未发现目标，不执行虚构删除。
+
+### 明确不删
+
+- `D:\MyProject\luiaiworld\node_modules`：按 plan 保留。
+- 远端 `origin/feature/site-skeleton-first-article`：按 plan 保留。
+- 两份系统 Temp 隔离物、C3 visualization 截图、tracked 架构图、服务器加固脚本和任何远端资源。
+- 禁止 `git clean -fdX`、`git branch -D` 或其它 force / 宽泛清理。
