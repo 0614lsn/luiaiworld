@@ -1,6 +1,6 @@
 # 站点骨架与首篇 Codex 架构文章 — 实施 plan
 
-> 状态：待重新审核（Contract change：新增公开 GitHub 仓库创建与 push；原 plan 于 2026-08-31 在 Codex 当前会话获批，批准原文：`批准 plan，进入阶段 2`）
+> 状态：Contract change 已获批准（2026-08-31，Codex 当前会话；批准原文：`批准修订 plan，创建公开仓库并进入阶段 2`；原 plan 批准记录保留于下文预裁决记录）
 > 仓库：`D:\MyProject\luiaiworld`；分支 `feature/site-skeleton-first-article`；计划远端 `origin=https://github.com/0614lsn/luiaiworld.git`（公开）；feature 原子 commit 串行 push，终审通过后合并并 push `main`，禁止 force push
 > Base：`4b28bcd2ffebd0cc7015ca33c6bb3132defd8b45`
 
