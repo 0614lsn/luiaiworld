@@ -1,0 +1,36 @@
+---
+const pathname = Astro.url.pathname;
+
+const links = [
+  { href: '/', label: '首页' },
+  { href: '/articles/', label: '文章' },
+  { href: '/about/', label: '关于' },
+];
+
+const isCurrent = (href: string) =>
+  href === '/' ? pathname === '/' : pathname.startsWith(href);
+---
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="site-identity" href="/" aria-label="LUI AI WORLD 首页">
+      <span class="site-identity__mark" aria-hidden="true">LUI</span>
+      <span class="site-identity__text">
+        <strong>LUI AI WORLD</strong>
+        <small>路易的 AI 新世界</small>
+      </span>
+    </a>
+
+    <nav aria-label="主导航">
+      <ul class="site-nav">
+        {links.map((link) => (
+          <li>
+            <a href={link.href} aria-current={isCurrent(link.href) ? 'page' : undefined}>
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</header>

@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="关于"
+  description="关于 LUI AI WORLD 与这个个人站的写作边界。"
+  canonicalPath="/about/"
+>
+  <header class="page-hero page-grid">
+    <p class="page-hero__index">ABOUT / 01</p>
+    <div>
+      <p class="eyebrow">ABOUT / 关于</p>
+      <h1>把好奇心，<br />变成可复查的记录。</h1>
+      <p>LUI AI WORLD 是路易记录 AI 工程、源码阅读与真实实践的个人网站。</p>
+    </div>
+  </header>
+
+  <section class="about-copy page-grid">
+    <p class="about-copy__lead">这里不把结论写成口号，也不把推断伪装成事实。</p>
+    <div>
+      <p>
+        每篇技术文章会尽量交代分析基线，链接到一手资料，并把官方陈述、源码能直接证明的事实与作者的架构判断分开。
+      </p>
+      <p>
+        这个站也会记录它自己的搭建过程。页面、文章和工具链都从一个很小的静态骨架开始，慢慢长成可持续维护的个人档案。
+      </p>
+      <a class="text-link" href="/articles/">去读文章 <span aria-hidden="true">↗</span></a>
+    </div>
+  </section>
+</BaseLayout>

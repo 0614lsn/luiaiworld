@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LUI AI WORLD">
+  <rect width="64" height="64" fill="#f4eedf"/>
+  <path d="M10 10v44h44M10 22h44M22 10v44" fill="none" stroke="#2458d3" stroke-width="3"/>
+  <path d="M32 32h22v22H32z" fill="#d84a2f"/>
+  <path d="M38 38h10v10H38z" fill="#f4eedf"/>
+</svg>
