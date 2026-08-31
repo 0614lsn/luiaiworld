@@ -22,7 +22,16 @@ function visibleProse(markdown) {
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/https?:\/\/\S+/g, '')
     .replace(/<!--([\s\S]*?)-->/g, '')
+    .replace(/<[^>]*>/g, '')
     .replace(/[*_~>#\[\]]/g, '');
+}
+
+function paragraphContaining(markdown, needle) {
+  const paragraph = articleBody(markdown)
+    .split(/\r?\n\s*\r?\n/)
+    .find((candidate) => candidate.includes(needle));
+  assert.ok(paragraph, `missing article paragraph containing ${needle}`);
+  return paragraph;
 }
 
 test('package manifest and lock pin only the planned direct dependencies', () => {
@@ -81,6 +90,29 @@ test('article metadata, source boundary, images and nearby evidence links are pr
   assert.match(article, /源码事实/);
   assert.match(article, /架构归纳/);
   assert.doesNotMatch(article, /数字生命卡兹克|wzglyay@virxact\.com|作者[：:]卡兹克/);
+});
+
+test('official open-source entries stay separate from pinned repository source facts', () => {
+  const officialParagraph = paragraphContaining(article, 'https://learn.chatgpt.com/docs/open-source');
+  const officialComponents = [
+    'Codex CLI',
+    'Codex SDK',
+    'Codex Security CLI',
+    'Codex Security TypeScript SDK',
+    'Codex App Server',
+    'Skills',
+    'Plugins',
+  ];
+  for (const component of officialComponents) {
+    assert.ok(officialParagraph.includes(component), `official component list missing ${component}`);
+  }
+  assert.doesNotMatch(officialParagraph, /Rust Core|协议类型|沙箱辅助组件/);
+
+  const snapshotParagraph = paragraphContaining(article, '/codex-rs/core');
+  for (const path of ['/codex-rs/core', '/codex-rs/protocol', '/codex-rs/sandboxing']) {
+    assert.ok(snapshotParagraph.includes(`d52478c52ef09f001142a4b82339467c3880877f${path}`));
+  }
+  assert.match(snapshotParagraph, /源码事实/);
 });
 
 test('visible article prose stays inside the length, heading and L1 contract', () => {

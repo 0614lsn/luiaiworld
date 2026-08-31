@@ -6,7 +6,8 @@
   --ink-soft: #555b62;
   --line: #b8b2a4;
   --blue: #2458d3;
-  --red: #d84a2f;
+  --red: #a33a28;
+  --red-accent: #d84a2f;
   --focus: #00796b;
   --content: 1320px;
   --serif: Georgia, 'Times New Roman', 'Noto Serif CJK SC', 'Songti SC', serif;
@@ -28,7 +29,6 @@ html {
 body {
   min-width: 0;
   margin: 0;
-  overflow-x: hidden;
   color: var(--ink);
   background: var(--paper);
   font-family: var(--sans);
@@ -522,7 +522,7 @@ main {
 .article-content blockquote {
   margin: 2.5rem 0;
   padding: 1.2rem 0 1.2rem 1.5rem;
-  border-left: 5px solid var(--red);
+  border-left: 5px solid var(--red-accent);
   color: var(--ink-soft);
   font-size: 1.12em;
 }
@@ -549,13 +549,35 @@ main {
   font-size: 0.78rem;
 }
 
-.article-content p:has(> img) {
+.article-content > p:has(> .diagram-viewport) {
+  margin: 0;
+}
+
+.diagram-viewport {
+  display: block;
   width: min(1180px, calc(100vw - 2rem));
   margin: 4rem 50%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+  touch-action: pan-x pan-y;
   transform: translateX(-50%);
 }
 
-.article-content img {
+.diagram-viewport::before {
+  display: none;
+  color: var(--ink-soft);
+  content: '图示可左右滑动，也可聚焦后使用方向键查看';
+  font: 700 0.72rem/1.4 var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.diagram-viewport:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.diagram-viewport img {
   width: 100%;
   height: auto;
   border: 1px solid var(--ink);
@@ -584,7 +606,7 @@ main {
 .site-footer {
   color: var(--paper-light);
   background: var(--ink);
-  border-top: 6px solid var(--red);
+  border-top: 6px solid var(--red-accent);
 }
 
 .site-footer__inner {
@@ -748,8 +770,22 @@ main {
     padding-block: 4rem;
   }
 
-  .article-content p:has(> img) {
+  .diagram-viewport {
     margin-block: 2.6rem;
+  }
+
+  .diagram-viewport::before {
+    position: sticky;
+    left: 0;
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    padding: 0 0 0.55rem;
+    background: var(--paper);
+  }
+
+  .diagram-viewport img {
+    min-width: 64rem;
   }
 
   .article-end {

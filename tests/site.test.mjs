@@ -35,6 +35,25 @@ function localTarget(urlPath) {
   return join(dist, clean.slice(1));
 }
 
+function cssCustomProperty(css, property) {
+  const match = css.match(new RegExp(`${property}:\\s*(#[0-9a-f]{6})`, 'i'));
+  assert.ok(match, `missing CSS custom property ${property}`);
+  return match[1];
+}
+
+function relativeLuminance(hex) {
+  const channels = hex.match(/[0-9a-f]{2}/gi).map((value) => Number.parseInt(value, 16) / 255);
+  const linear = channels.map((value) => (
+    value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  ));
+  return (0.2126 * linear[0]) + (0.7152 * linear[1]) + (0.0722 * linear[2]);
+}
+
+function contrastRatio(first, second) {
+  const values = [relativeLuminance(first), relativeLuminance(second)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}
+
 test('static build contains every required route and a resolvable internal link graph', () => {
   for (const [route, relativePath] of routes) {
     assert.ok(existsSync(join(root, relativePath)), `missing output for ${route}`);
@@ -90,12 +109,18 @@ test('built pages retain semantic accessibility and all three optimized diagrams
   }
 
   const articleHtml = read(routes.get('/articles/codex-harness-beyond-model/'));
-  const diagrams = [...articleHtml.matchAll(/<img\b[^>]*>/g)]
-    .map((match) => match[0])
-    .filter((tag) => /codex-architecture|system-context|turn-loop|tool-approval-sandbox/.test(tag));
+  const diagramViewports = [...articleHtml.matchAll(/<span\b[^>]*class="diagram-viewport"[^>]*>[\s\S]*?<\/span>/g)]
+    .map((match) => match[0]);
 
-  assert.equal(diagrams.length, 3, 'article must render all three diagrams');
-  for (const image of diagrams) {
+  assert.equal(diagramViewports.length, 3, 'article must render three local diagram viewports');
+  for (const viewport of diagramViewports) {
+    const openingTag = viewport.match(/^<span\b[^>]*>/)[0];
+    const image = viewport.match(/<img\b[^>]*>/)?.[0];
+
+    assert.match(openingTag, /tabindex="0"/);
+    assert.match(openingTag, /role="region"/);
+    assert.match(openingTag, /aria-label="[^"]*方向键[^"]*"/);
+    assert.ok(image, 'diagram viewport must retain its image');
     assert.match(image, /alt="[^"]+"/);
     assert.match(image, /src="\/_astro\/[^"]+"/);
     assert.match(image, /width="\d+"/);
@@ -120,6 +145,17 @@ test('output remains static, self-contained and low-bandwidth aware', () => {
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.doesNotMatch(css, /body\s*\{[^}]*overflow-x\s*:\s*hidden/s);
+  assert.match(css, /\.diagram-viewport\s*\{[^}]*overflow-x:\s*auto/s);
+  assert.match(css, /\.diagram-viewport:focus-visible\s*\{/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*\.diagram-viewport img\s*\{[^}]*min-width:\s*64rem/s);
+
+  const paper = cssCustomProperty(css, '--paper');
+  const red = cssCustomProperty(css, '--red');
+  const redAccent = cssCustomProperty(css, '--red-accent');
+  assert.ok(contrastRatio(red, paper) >= 4.5, 'normal red text must meet WCAG AA contrast');
+  assert.equal(redAccent.toLowerCase(), '#d84a2f', 'the decorative vermilion accent must remain');
+  assert.doesNotMatch(css, /color:\s*var\(--red-accent\)/);
 
   const sourceAstro = filesBelow(join(root, 'src'))
     .filter((path) => ['.astro', '.ts', '.md'].includes(extname(path)))

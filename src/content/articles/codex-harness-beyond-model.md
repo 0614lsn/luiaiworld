@@ -38,7 +38,9 @@ sourceBaseline: "d52478c52ef09f001142a4b82339467c3880877f"
 
 是 harness。
 
-边界还得再收紧一点。[OpenAI 的开源组件清单](https://learn.chatgpt.com/docs/open-source)列出了 Codex CLI、Rust Core、App Server、TypeScript SDK、协议类型与沙箱辅助组件。模型权重、托管推理服务、Codex cloud 和 IDE extension 并没有因为 harness 开源就一起变成开源代码。
+边界还得再收紧一点。[OpenAI 的开源组件清单](https://learn.chatgpt.com/docs/open-source)当前把 Codex CLI、Codex SDK、Codex Security CLI、Codex Security TypeScript SDK、Codex App Server、Skills 和 Plugins 列为顶层开源组件，也明确标出 IDE extension 与 Codex cloud 并不开源。
+
+另一组事实来自本文固定的仓库快照。那里面能直接看到 [Rust Core](https://github.com/openai/codex/tree/d52478c52ef09f001142a4b82339467c3880877f/codex-rs/core)、[协议类型](https://github.com/openai/codex/tree/d52478c52ef09f001142a4b82339467c3880877f/codex-rs/protocol)与[沙箱辅助组件](https://github.com/openai/codex/tree/d52478c52ef09f001142a4b82339467c3880877f/codex-rs/sandboxing)。它们是 `openai/codex` 仓库内部的源码事实，不是官方页面逐项列出的独立顶层组件。模型权重与托管推理服务同样不在那份开源清单里。
 
 所以，把这件事写成整个 Codex 产品已经全部开源，会把两层东西揉在一起。更准确的讲法是，模型与产品界面之间那套关键的 Agent 运行时和集成面，现在可以被检查，也可以被复用。模型服务与部分产品外壳仍在各自的边界里。
 
@@ -50,7 +52,7 @@ sourceBaseline: "d52478c52ef09f001142a4b82339467c3880877f"
 
 先看第一张图。
 
-![Codex harness 系统总架构，展示体验与集成层、协议与适配层、Core harness、模型服务、工具执行和持久化边界](../../assets/codex-architecture/01-system-context.png)
+<span class="diagram-viewport" tabindex="0" role="region" aria-label="Codex harness 系统总架构。可左右滑动或使用方向键查看完整图示">![Codex harness 系统总架构，展示体验与集成层、协议与适配层、Core harness、模型服务、工具执行和持久化边界](../../assets/codex-architecture/01-system-context.png)</span>
 
 图看着很大，但主线其实只有一条。客户端把控制请求送进去，Core 接管线程与 turn，模型和工具在循环中协作，运行状态再通过事件流回到客户端。旁边的持久化系统把真正需要恢复的东西留下来。
 
@@ -86,7 +88,7 @@ sourceBaseline: "d52478c52ef09f001142a4b82339467c3880877f"
 
 再看第二张图，真正的循环在这里露出来了。
 
-![一次 Codex turn 的循环，展示 turn 请求、StepContext、模型响应、工具回填、上下文压缩与完成事件](../../assets/codex-architecture/02-turn-loop.png)
+<span class="diagram-viewport" tabindex="0" role="region" aria-label="一次 Codex turn 的循环。可左右滑动或使用方向键查看完整图示">![一次 Codex turn 的循环，展示 turn 请求、StepContext、模型响应、工具回填、上下文压缩与完成事件](../../assets/codex-architecture/02-turn-loop.png)</span>
 
 一条普通路径可以压成下面这样。
 
@@ -160,7 +162,7 @@ Codex 同时维护运行时状态、模型可见状态和持久化状态。当�
 
 接着看第三张图。
 
-![Codex 工具安全链路，展示 ToolRegistry、执行规则、审批来源、SandboxManager、权限升级与 App Server 往返](../../assets/codex-architecture/03-tool-approval-sandbox.png)
+<span class="diagram-viewport" tabindex="0" role="region" aria-label="Codex 工具安全链路。可左右滑动或使用方向键查看完整图示">![Codex 工具安全链路，展示 ToolRegistry、执行规则、审批来源、SandboxManager、权限升级与 App Server 往返](../../assets/codex-architecture/03-tool-approval-sandbox.png)</span>
 
 安全很容易被压成一个开关，要么允许，要么禁止。源码不是这么做的。
 
