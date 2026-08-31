@@ -198,6 +198,29 @@
   6. 文章 prose 扫描按 AC5 的排除规则得到 4000–8000 个中文字符、0 个 Markdown 小标题、L1 禁用词/标点/套话零命中；不得为通过测试而删掉必要源码 URL 或代码。
   7. `git diff -- scripts/harden-luiaiworld-ubuntu.sh` 为空；`git status --short` 的 tracked/untracked payload 与本文件集逐项一致，生成目录均被 `.gitignore` 忽略。
 
+### Task F1 — C1 阻断项修复（串行，合同内验证修复）
+
+- [ ] 未开始
+- **触发证据**：Candidate C1 `7bee2c5584223fa69a67371a3376368e0ba555fe`；T1 唯一 FAIL 为 390×844 三张架构图标签不可读；C1 whole-branch review 另报 2 个 Important：官方开源清单归因粒度写宽、朱红小字号文本对比度约 3.67:1。
+- **目标**：关闭 C1 的 1 个测试 FAIL 与 3 个 Important，不扩大站点功能或依赖范围。
+- **文件集**：
+  - `astro.config.mjs`
+  - `src/styles/global.css`
+  - `src/content/articles/codex-harness-beyond-model.md`
+  - `tests/site.test.mjs`
+  - `tests/content.test.mjs`（仅用于不脆弱的来源归因回归；无可靠断言时保持不变）
+- **执行模式**：串行；由未参与 C1 实现、测试或 review 的独立 implementer 执行。
+- **隔离位置**：`D:\MyProject\luiaiworld` feature worktree。
+- **task 分支**：`feature/site-skeleton-first-article`。
+- **集成顺序**：序号 3；完成后冻结新 Candidate C2。
+- **冲突处置**：需要新增依赖、改 content schema、改页面结构文件或放宽 AC3/AC5 时立即报 `NEEDS_CONTEXT`；不得用 `body { overflow-x: hidden }` 裁掉图、不得删除来源或降低文字字号来绕过问题。
+- **完成判据**：
+  1. 构建后的三张文章图各自位于可聚焦的局部图示视口，具有可见 focus 与清晰的触摸/键盘横向查看语义；390px 下图使用足以辨认标签的最小展示宽度，溢出只发生在该视口内，页面根节点不横向滚动；桌面图不退化、alt 保留。
+  2. 文章官方开源段只把当前 Open Source 页面明确列出的顶层组件归为官方清单事实；Rust Core、协议和沙箱辅助组件改为固定 `d52478c...` 仓库中的源码事实，并就近链接固定源码。
+  3. 正常字号朱红文字在实际暖纸背景上的对比度至少 4.5:1，仍保留朱红点色；新增机械断言覆盖颜色/局部图示视口结构，但不得把结构断言冒充真实移动可读性测试。
+  4. `npm run check`、`npm run build`、`npm test` 全部退出码 0；文章仍为 4000–8000 中文字符、0 Markdown 小标题、L1 零命中，三张图与事实基线保留。
+  5. `git status --short` 只出现本 Task 实际需要的上述文件；不修改 plan checkbox、不 commit、不 push。
+
 ## 7. 外部工具入口 dry-run sanity
 
 - 2026-08-31 已在仓库根只读确认 `node v24.19.0`、`npm 11.17.0`。
