@@ -1,7 +1,7 @@
 # 站点骨架与首篇 Codex 架构文章 — 实施 plan
 
-> 状态：已获批准（2026-08-31，Codex 当前会话；批准原文：`批准 plan，进入阶段 2`）
-> 仓库：`D:\MyProject\luiaiworld`；分支 `feature/site-skeleton-first-article`；无远端，不 push，终审通过后仅本地合并到 `main`
+> 状态：待重新审核（Contract change：新增公开 GitHub 仓库创建与 push；原 plan 于 2026-08-31 在 Codex 当前会话获批，批准原文：`批准 plan，进入阶段 2`）
+> 仓库：`D:\MyProject\luiaiworld`；分支 `feature/site-skeleton-first-article`；计划远端 `origin=https://github.com/0614lsn/luiaiworld.git`（公开）；feature 原子 commit 串行 push，终审通过后合并并 push `main`，禁止 force push
 > Base：`4b28bcd2ffebd0cc7015ca33c6bb3132defd8b45`
 
 ## 1. 背景与目标
@@ -17,6 +17,7 @@
 3. 首篇文章以 `D:\MyProject\codex_arch` 的固定源码导读为主要素材，解释 Codex harness 为什么不只是一次模型调用。
 4. 文章遵循 `khazix-writer` 的节奏、口语与四层质检，但不冒充卡兹克、不使用其署名或联系方式。
 5. 本地构建产物为静态 HTML/CSS/优化图片，不引入前端 UI 框架和客户端 hydration。
+6. 在 GitHub 账号 `0614lsn` 下创建公开仓库 `luiaiworld`，把 feature 开发过程与最终 `main` 结果按本 plan 的 push 纪律同步上去。
 
 ## 2. 验收标准
 
@@ -63,6 +64,14 @@
 - `README.md` 只说明项目定位、Node.js `>=22.12.0` 前置条件和经过验证的 `npm ci`、`npm run dev`、`npm run check`、`npm run build`、`npm run preview` 路径。
 - README 不包含个人绝对路径、部署承诺、未实现功能、密钥/IP/服务器信息或大段架构说明。
 
+### AC7 — GitHub 公开仓库与远端一致性
+
+- `https://github.com/0614lsn/luiaiworld` 存在且 visibility 为 `PUBLIC`，仓库描述为「路易的 AI 新世界个人网站源码」，homepage 为 `https://luiaiworld.com`，默认分支为 `main`。
+- 本地仅配置一个本需求代码远端 `origin=https://github.com/0614lsn/luiaiworld.git`；不操作 `0614lsn` 账号下的其他仓库或组织资源。
+- 阶段 3 每个 Candidate 冻结前，远端 `feature/site-skeleton-first-article` 必须与本地 Candidate Head 相同；阶段 4 合并后远端 `main` 必须与本地 merge Head 相同；阶段 5 每次收尾 commit 后继续同步 `main`。
+- 全历史与待 push tree 的敏感模式扫描为零命中；`.pem`、私钥、token、`.env`、公网 IP 或本机 SSH 配置不得进入 Git 历史。
+- 仓库公开不等于授予开源许可证；本需求不擅自添加 LICENSE、GitHub Actions、branch protection、issue、PR、release 或 secret。
+
 ### 验收标准承接核对
 
 | 验收标准 | Task 文件集 | 测试项 |
@@ -73,8 +82,9 @@
 | AC4 | Task 1 的 config、layouts、assets、content | T1.2、T1.3 |
 | AC5 | Task 1 的文章、content test、三张图 | T2.1、T2.2、T2.3 |
 | AC6 | Task 1 的 README、package scripts | T1.1、T1.2 |
+| AC7 | Task G 的 GitHub 仓库、`origin`、连接器注册表与各阶段远端 refs | TG.1–TG.5、T1.1、阶段 4/5 push 后核验 |
 
-核对结论：每条验收标准的文件范围均由 Task 1 明确承接；技术、浏览器与文章三类测试覆盖同宽范围。
+核对结论：AC1–AC6 的文件范围由 Task 1 承接，AC7 的外部资源与路由状态由 Task G 承接；技术、远端、浏览器与文章测试覆盖同宽范围。
 
 ## 3. 预裁决记录
 
@@ -87,21 +97,27 @@
 | Q2 | 网站代码和文档放在哪里 | 统一放入 `D:\MyProject\luiaiworld` | 用户明确指定该目录为个人网站项目目录，2026-08-30 |
 | Q3 | 本轮先交付什么 | 先完成站点骨架和首篇 `codex_arch` 文章 | 用户回复「先做站点骨架和文章」，2026-08-30；本轮再次要求继续完成，2026-08-31 |
 | Q4 | 使用什么写作方法 | 使用已安装的长文写作 skill，但内容属于用户个人站 | 用户明确要求用之前安装的写文章 skill，2026-08-30；本 plan 采用 `khazix-writer` 的方法但不冒充其作者身份 |
+| Q5 | 是否把代码放到 GitHub | 在用户本人账号中新建唯一目标仓库并按 feature/main 纪律 push | 用户要求「新建一个 luiaiworld 仓库」并提交代码，2026-08-31 |
+| Q6 | GitHub 仓库可见性 | 推荐先私有；若用户明确需要公开则按公开仓库执行 | 用户裁决原文：`建为公开仓库`，2026-08-31 |
 
 ## 4. 预授权清单
 
 批准本 plan 即一并授权以下动作，实施中不再逐次确认：
 
-1. 在 feature 分支安装并锁定 `astro@7.2.9`、`@astrojs/check@0.9.10`、`typescript@6.0.3`；允许 npm 访问公开 registry，生成 `node_modules/`、`.astro/` 与 `dist/`。
-2. 从 `D:\MyProject\codex_arch\diagrams` 复制三张既有 PNG 到本仓 `src/assets/codex-architecture/`；只复制，不修改源目录。
-3. 独立 implementer 在 Task 1 文件集内实现、自测并交还写入权；主控精确暂存 payload、README、测试与 Task checkbox，形成一个原子 task commit。
-4. 阶段 3 fresh tester 可执行 `npm ci`、类型检查、静态构建、Node 测试，及在 `127.0.0.1:4321` 启停本地 preview；不得监听公网地址或访问生产服务器。
-5. 阶段 3 浏览器 tester 可在 Codex 应用内浏览器打开本地 preview、切换桌面/移动视口、点击站内导航并留取截图证据；不得操作用户其他已登录页面。
-6. 阶段 3 的 FAIL、Critical 或 Important 可由新的独立 implementer 在本合同范围内修复，并由主控形成原子修复 commit；若需要扩大范围则停止并升级人工。
-7. Final Code Head 冻结后，主控可写入并提交本需求唯一 report；自动终审四条件全部满足时，可将 feature 分支以 `--no-ff` 方式本地合并到 `main`，不得 push。
-8. 合并后按 LDP 阶段 5 写入 `docs/knowledge/2026-08-31-site-skeleton-first-article.md`、更新 `docs/knowledge/INDEX.md`，并由独立 subagent 写入 `docs/evolution-log/2026-08-31-site-skeleton-first-article.md`；主控可分别原子提交这些收尾工件。
-9. 六面审计落盘并确认 feature 已合并后，可用非强制方式删除本地 `feature/site-skeleton-first-article` 分支，并删除本轮生成的临时 preview 日志、`dist/`、`.astro/`；保留 `node_modules/` 以便用户继续本地预览。
-10. 不得删除或改写 `scripts/harden-luiaiworld-ubuntu.sh`，不得执行 `--force`、远端 push、服务器写操作、域名/备案/安全组变更或公网部署。
+1. 使用已登录 GitHub CLI 在账号 `0614lsn` 下创建且仅创建公开仓库 `luiaiworld`，设置 plan 声明的 description/homepage；创建前若同名仓库突然存在，立即停止，不覆盖、不改可见性。
+2. 为本地仓库添加唯一代码远端 `origin=https://github.com/0614lsn/luiaiworld.git`；先 push 基线 `main`，再 push 当前 feature，并验证远端 SHA。允许将默认分支校正为 `main`，禁止 force push、history rewrite 和删除远端仓库。
+3. feature 上每个已由主控形成的原子 task/fix/report/状态 commit 均可串行 push 到同名远端 feature；任何 push 前先确认 upstream 与 ahead/behind，非 fast-forward 立即停止升级人工。
+4. 阶段 4 自动终审四条件满足后，可将 feature 以 `--no-ff` 本地合并到 `main` 并 fast-forward push `main`；阶段 5 的 knowledge/evolution/audit 收尾 commit 可继续逐次 fast-forward push `main`。本需求不删除远端 feature 分支。
+5. 在 feature 分支安装并锁定 `astro@7.2.9`、`@astrojs/check@0.9.10`、`typescript@6.0.3`；允许 npm 访问公开 registry，生成 `node_modules/`、`.astro/` 与 `dist/`。
+6. 从 `D:\MyProject\codex_arch\diagrams` 复制三张既有 PNG 到本仓 `src/assets/codex-architecture/`；只复制，不修改源目录。
+7. 独立 implementer 在 Task 1 文件集内实现、自测并交还写入权；主控精确暂存 payload、README、测试与 Task checkbox，形成一个原子 task commit。
+8. 阶段 3 fresh tester 可执行 `npm ci`、类型检查、静态构建、Node 测试，及在 `127.0.0.1:4321` 启停本地 preview；不得监听公网地址或访问生产服务器。
+9. 阶段 3 浏览器 tester 可在 Codex 应用内浏览器打开本地 preview、切换桌面/移动视口、点击站内导航并留取截图证据；不得操作用户其他已登录页面。
+10. 阶段 3 的 FAIL、Critical 或 Important 可由新的独立 implementer 在本合同范围内修复，并由主控形成原子修复 commit；若需要扩大范围则停止并升级人工。
+11. Final Code Head 冻结后，主控可写入并提交本需求唯一 report；push 纪律按第 3、4 项执行。
+12. 合并后按 LDP 阶段 5 写入 `docs/knowledge/2026-08-31-site-skeleton-first-article.md`、更新 `docs/knowledge/INDEX.md`，并由独立 subagent 写入 `docs/evolution-log/2026-08-31-site-skeleton-first-article.md`；主控可分别原子提交并 push 这些收尾工件。
+13. 六面审计落盘并确认 feature 已合并后，可用非强制方式删除本地 `feature/site-skeleton-first-article` 分支，并删除本轮生成的临时 preview 日志、`dist/`、`.astro/`；保留 `node_modules/` 以便用户继续本地预览。
+14. 不得删除或改写 `scripts/harden-luiaiworld-ubuntu.sh`，不得执行 `--force`、删除 GitHub 仓库/远端分支、操作其他 GitHub 资源、服务器写操作、域名/备案/安全组变更或公网部署。
 
 ## 5. 终审策略声明
 
@@ -111,7 +127,27 @@
 
 ## 6. Task 列表
 
-无并行组，全部串行；同一工作树任一时刻只有一个 implementer 写入。
+无开发并行组；Task G 先串行完成外部仓库初始化，Task 1 再由唯一 implementer 写入工作树。
+
+### Task G — GitHub 公开仓库与连接器初始化（串行，Task 1 前）
+
+- [ ] 未开始
+- **目标**：创建唯一目标公开仓库，建立 `origin`，安全同步 `main` 与 feature，并把连接器从 planned 更新为 active。
+- **外部对象**：`github.com/0614lsn/luiaiworld`，visibility `PUBLIC`；不得操作其他仓库。
+- **文件集（execution subagent 不写；主控收口时允许回写）**：
+  - `docs/connectors.md`
+  - `docs/development/2026-08-31-site-skeleton-first-article-plan.md` 的 Task G checkbox 与状态注记
+- **执行模式**：串行；独立 execution subagent 仅创建/核验 GitHub 仓库，不修改本地文件、不执行 git commit、不再派 agent。
+- **隔离位置**：`D:\MyProject\luiaiworld` feature worktree（execution subagent 只读本地状态）。
+- **task 分支**：`feature/site-skeleton-first-article`。
+- **集成顺序**：序号 1，完成后才派 Task 1。
+- **冲突处置**：同名仓库已存在、登录账号变化、visibility/owner 不符、非 fast-forward 或敏感扫描命中时立即停止；不得接管、覆盖、删仓或改历史。
+- **完成判据**：
+  1. `gh auth status` 显示 active account `0614lsn`，token 仅来自系统 keyring；日志不得出现未遮蔽 token。
+  2. 对每个本地 commit 执行只返回命中文件名的敏感内容扫描，私钥头、GitHub/AWS/阿里云 token 与真实公网 IP 零命中；`git ls-files '*.pem' '.env' '.env.*'` 为空。文档中用于说明禁令的字面量不算 secret 命中；任何疑似真实值必须在公开 push 前关闭。
+  3. `gh repo view 0614lsn/luiaiworld --json nameWithOwner,visibility,url,defaultBranchRef,description,homepageUrl` 返回 owner/name、`PUBLIC`、description/homepage 与 AC7 一致。
+  4. `git remote get-url origin` 精确返回 `https://github.com/0614lsn/luiaiworld.git`；`git ls-remote --heads origin main feature/site-skeleton-first-article` 的 SHA 分别与预期本地 refs 一致。
+  5. 主控把 `docs/connectors.md` 状态改为 active、勾选 Task G，并形成一个原子状态 commit 后 fast-forward push feature；最终远端 feature 等于该 commit。
 
 ### Task 1 — Astro 站点骨架与首篇文章（串行）
 
@@ -151,7 +187,7 @@
 - **执行模式**：串行。
 - **隔离位置**：`D:\MyProject\luiaiworld` feature worktree。
 - **task 分支**：`feature/site-skeleton-first-article`。
-- **集成顺序**：唯一 Task 1，完成后直接成为 feature Candidate。
+- **集成顺序**：序号 2；Task G 完成后执行，完成后成为 feature Candidate。
 - **冲突处置**：发现 `scripts/harden-luiaiworld-ubuntu.sh` 变化、文件集外 tracked 变化或来源不明写入时立即停止并报 `NEEDS_CONTEXT`；实现判断交新的独立 implementer，主控不下场修。
 - **完成判据**：
   1. 运行 `node --version`、`npm --version`、`npm view astro@7.2.9 engines --json`；预期 Node 为 `v24.19.0`、npm 为 `11.17.0`、Astro 要求 Node `>=22.12.0`。
@@ -168,6 +204,8 @@
 - 2026-08-31 已执行 `npm view astro version engines --json`，确认当前 `astro 7.2.9` 需要 Node `>=22.12.0`；`@astrojs/check 0.9.10` 支持 TypeScript `^5 || ^6`，故锁定 `typescript 6.0.3`，不使用不兼容的 TypeScript 7。
 - Astro 官方文档确认非空目录应采用手动安装；Task 1 第一个实现 step 仍须按完成判据重新执行版本/入口 sanity，结果不符时停止为 `NEEDS_CONTEXT`。
 - 2026-08-31 对全部拟新增文件执行 `git check-ignore -v --no-index`，结果为 `ZERO_HITS`，无需 `git add -f`。
+- 2026-08-31 已执行 GitHub CLI sanity：`gh 2.98.0`、active account `0614lsn`、HTTPS/keyring 认证、`0614lsn/luiaiworld` 返回 `NOT_FOUND`；凭证值不写入 plan、仓库或后续命令。
+- GitHub 创建入口在 Task G 第一项再次执行 `gh auth status` 与 `gh repo view`；目标状态与本次 sanity 不一致时停止，不把“已存在”误当作可接管资源。
 - 应用内浏览器入口仅在阶段 3 本地 preview 已启动后使用；tester 首次操作前必须按 Browser skill 读取所选浏览器完整文档。无法建立浏览器会话时，AC3 记 `INCONCLUSIVE`，不得用 HTTP 抓取冒充视觉验证。
 
 ## 8. 已知弹性点
@@ -178,6 +216,8 @@
 4. **长文 markup 与风格扫描冲突**：URL、frontmatter、代码围栏和 Markdown 标记排除在 prose 扫描外；实际呈现给读者的散文仍必须零命中。
 5. **图片构建策略**：保留源 PNG 作为仓库事实资产，由 Astro 产出优化文件；若生成格式随 Astro 变化，以“原始 PNG 不原样进入 dist、页面可读、构建通过”为判据。
 6. **浏览器能力不可用**：结构/HTTP 测试可继续，但视觉项必须记 `INCONCLUSIVE` 并触发人工升级，不能自动合并。
+7. **GitHub 同名仓库竞态**：创建前若 `0614lsn/luiaiworld` 已存在，Task G 停止并升级人工；不得自动复用、改可见性或覆盖内容。
+8. **远端分叉**：任何本地分支 behind 或 push 非 fast-forward 都停止；本需求不 pull/rebase 未知远端历史，不 force push。
 
 ## 9. 测试计划
 
@@ -187,13 +227,14 @@ whole-branch reviewer 审查 `Base..Candidate` 与全部证据。
 
 ### T1 — 技术构建、路由与浏览器（fresh tester A）
 
-证据绑定 AC1、AC2、AC3、AC4、AC6。
+证据绑定 AC1、AC2、AC3、AC4、AC6、AC7。
 
 1. 在 `D:\MyProject\luiaiworld` 执行 `git rev-parse HEAD` 并记录 Candidate；执行 `npm ci`、`npm run check`、`npm run build`、`npm test`，预期全部退出码 0，原始关键行返回主控。
-2. 运行 `git status --short`，预期无 tracked 变化；检查 `dist/` 存在 AC2 全部路由、无外部字体/分析脚本/客户端框架 bundle，三张原始大 PNG 不以原文件名和原始体积复制到 `dist/`。
-3. 启动 `npm run preview -- --host 127.0.0.1 --port 4321`；声明观察边界为“进程返回 listening URL 后至首页、文章列表、文章、关于、404 五类页面检查完成”，记录进程/session 与结束状态。
-4. 使用应用内浏览器打开 `http://127.0.0.1:4321/`：桌面 1440×900 与移动 390×844 分别检查首页、文章列表、文章详情；断言无横向滚动、导航/焦点可用、三张图可读且有 alt、站内链接正确、404 返回自定义页面，并留取桌面首页、移动首页、桌面文章、移动文章截图证据。
-5. 停止 preview 进程并记录退出；不得修改代码。浏览器不可用或 preview 无法归类结束时按第 8 节记 `INCONCLUSIVE`。
+2. 执行 `git remote get-url origin` 与 `git ls-remote --heads origin feature/site-skeleton-first-article`，预期 URL 为 AC7 唯一远端且远端 feature SHA 等于 Candidate Head；不一致即 FAIL，不由 tester push 修复。
+3. 运行 `git status --short`，预期无 tracked 变化；检查 `dist/` 存在 AC2 全部路由、无外部字体/分析脚本/客户端框架 bundle，三张原始大 PNG 不以原文件名和原始体积复制到 `dist/`。
+4. 启动 `npm run preview -- --host 127.0.0.1 --port 4321`；声明观察边界为“进程返回 listening URL 后至首页、文章列表、文章、关于、404 五类页面检查完成”，记录进程/session 与结束状态。
+5. 使用应用内浏览器打开 `http://127.0.0.1:4321/`：桌面 1440×900 与移动 390×844 分别检查首页、文章列表、文章详情；断言无横向滚动、导航/焦点可用、三张图可读且有 alt、站内链接正确、404 返回自定义页面，并留取桌面首页、移动首页、桌面文章、移动文章截图证据。
+6. 停止 preview 进程并记录退出；不得修改代码。浏览器不可用或 preview 无法归类结束时按第 8 节记 `INCONCLUSIVE`。
 
 ### T2 — 文章事实、风格与来源（fresh tester B）
 
@@ -215,7 +256,7 @@ whole-branch reviewer 审查 `Base..Candidate` 与全部证据。
 ## 10. 范围外（不做）
 
 - 不部署 ECS，不安装/修改 Nginx、Docker、服务器软件，不开放 80/443，不改安全组、UFW、DNS 或 ICP 备案。
-- 不创建远端 Git 仓库，不 push，不发布公网 preview。
+- 除 `github.com/0614lsn/luiaiworld` 外，不创建或修改任何远端仓库；不创建 PR、issue、workflow、release、secret，不授予开源 LICENSE，不发布公网 preview。
 - 不做 CMS、后台、数据库、登录、评论、搜索、Newsletter、分析埋点、广告、RSS、站点地图或深色模式。
 - 不制作 PPT，不调用 PPT skill；本轮只交付站点与文章。
 - 不生成作者照片、社交账号、邮箱或个人履历，不编造用户未提供的身份信息。
