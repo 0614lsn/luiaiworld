@@ -12,7 +12,11 @@ const date = new Intl.DateTimeFormat('zh-CN', {
   month: 'long',
   day: 'numeric',
 }).format(article.data.publishedAt);
-const sourceUrl = `https://github.com/openai/codex/commit/${article.data.sourceBaseline}`;
+const source = article.data.source ?? (article.data.sourceBaseline ? {
+  label: `源码基线 ${article.data.sourceBaseline.slice(0, 10)}`,
+  url: `https://github.com/openai/codex/commit/${article.data.sourceBaseline}`,
+  checkedAt: '',
+} : undefined);
 ---
 
 <BaseLayout
@@ -29,13 +33,14 @@ const sourceUrl = `https://github.com/openai/codex/commit/${article.data.sourceB
         <span>NO. 001</span>
       </div>
       <div class="article-hero__main">
-        <p class="eyebrow">CODEX / HARNESS / SOURCE READING</p>
+        <p class="eyebrow">{article.data.eyebrow ?? article.data.tags.join(' / ')}</p>
         <h1>{article.data.title}</h1>
         <p class="article-dek">{article.data.description}</p>
         <div class="article-byline">
           <time datetime={article.data.publishedAt.toISOString()}>{date}</time>
           <span>{article.data.tags.join(' · ')}</span>
-          <a href={sourceUrl}>源码基线 {article.data.sourceBaseline.slice(0, 10)}</a>
+          {source && <a href={source.url}>{source.label}</a>}
+          {source?.checkedAt && <span>来源核对 {source.checkedAt}</span>}
         </div>
       </div>
     </header>
@@ -46,8 +51,15 @@ const sourceUrl = `https://github.com/openai/codex/commit/${article.data.sourceB
 
     <footer class="article-end">
       <span aria-hidden="true">■</span>
-      <p>本文基于固定源码快照，后续版本可能已经变化。</p>
+      <p>{article.data.contentNote ?? (article.data.sourceBaseline
+        ? '本文基于固定源码快照，后续版本可能已经变化。'
+        : '本文记录所标日期的资料与判断，后续版本可能变化。')}</p>
       <a class="text-link" href="/articles/">返回文章列表 <span aria-hidden="true">↗</span></a>
     </footer>
   </article>
 </BaseLayout>
+
+<script>
+  import { enhanceCodeBlocks } from '../lib/code-copy.mjs';
+  enhanceCodeBlocks();
+</script>

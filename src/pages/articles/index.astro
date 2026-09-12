@@ -1,9 +1,9 @@
 ---
-import { getCollection } from 'astro:content';
+import { getVisibleArticles } from '../../lib/articles';
 import ArticleCard from '../../components/ArticleCard.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
-const articles = (await getCollection('articles')).sort(
+const articles = (await getVisibleArticles()).sort(
   (a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf(),
 );
 ---

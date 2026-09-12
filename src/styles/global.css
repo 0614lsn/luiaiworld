@@ -519,6 +519,29 @@ main {
   font-weight: 700;
 }
 
+.draft-banner {
+  padding: 0.8rem 1.5rem;
+  border-block: 1px solid var(--blue);
+  background: var(--paper-light);
+  color: var(--blue);
+  text-align: center;
+  font: 0.85rem/1.5 var(--sans);
+}
+
+.article-content h2,
+.article-content h3 {
+  margin: 2.2em 0 0.8em;
+  font-family: var(--sans);
+  line-height: 1.45;
+  scroll-margin-top: 2rem;
+}
+
+.article-content h2 { font-size: 1.65em; }
+.article-content h3 { font-size: 1.25em; }
+.article-content li { margin-block: 0.65em; }
+.article-content ul,
+.article-content ol { padding-left: 1.5em; }
+
 .article-content blockquote {
   margin: 2.5rem 0;
   padding: 1.2rem 0 1.2rem 1.5rem;
@@ -534,20 +557,71 @@ main {
 }
 
 .article-content pre {
-  width: min(960px, calc(100vw - 2rem));
-  margin: 2.5rem 50%;
-  padding: 1.5rem;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 2rem 0;
+  padding: 1.2rem;
   overflow-x: auto;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
   background: var(--paper-light) !important;
-  transform: translateX(-50%);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .article-content pre code {
   padding: 0;
   background: transparent;
-  font-size: 0.78rem;
+  font-size: 1rem;
 }
+
+.article-content pre[data-language="text"] code,
+.article-content pre[data-language="plaintext"] code {
+  font: 1rem/1.8 var(--sans);
+  white-space: pre-wrap;
+}
+
+.article-content .code-frame {
+  width: 100%;
+  max-width: 100%;
+  margin: 2rem 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper-light);
+  overflow: hidden;
+}
+
+.article-content .code-frame pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.code-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid var(--line);
+  font: 0.8rem/1.5 var(--sans);
+}
+
+.code-language { color: var(--ink-soft); }
+.copy-feedback { margin-left: auto; font-size: 0.75rem; }
+.copy-code {
+  flex-shrink: 0;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.copy-code:hover { border-color: var(--blue); }
+.copy-code:disabled { cursor: wait; }
+.copy-code:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 
 .article-content > p:has(> .diagram-viewport) {
   margin: 0;

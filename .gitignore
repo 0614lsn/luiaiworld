@@ -9,3 +9,8 @@ dist/
 npm-debug.log*
 .DS_Store
 Thumbs.db
+
+# Local unpublished manuscripts, generated packs and platform evidence.
+.content/
+content-projects/*
+!content-projects/README.md

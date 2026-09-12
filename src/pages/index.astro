@@ -1,9 +1,9 @@
 ---
-import { getCollection } from 'astro:content';
+import { getVisibleArticles } from '../lib/articles';
 import ArticleCard from '../components/ArticleCard.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-const articles = (await getCollection('articles')).sort(
+const articles = (await getVisibleArticles()).sort(
   (a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf(),
 );
 const featured = articles.find((article) => article.data.featured);
@@ -46,7 +46,7 @@ if (!featured) {
   <section class="featured-section" aria-labelledby="featured-title">
     <div class="section-heading">
       <p class="eyebrow">FEATURED / 精选</p>
-      <h2 id="featured-title">从一行调用，走进一套运行时</h2>
+      <h2 id="featured-title">从问题出发，把方法写清楚</h2>
     </div>
     <ArticleCard article={featured} index={1} />
   </section>

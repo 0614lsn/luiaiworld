@@ -11,13 +11,21 @@
     "check": "astro check",
     "build": "astro build",
     "preview": "astro preview",
+    "content": "node scripts/content/cli.mjs",
+    "content:prune": "node scripts/content/prune.mjs",
+    "content:hub": "node scripts/content/hub.mjs",
+    "wechat:draft": "npx --yes bun scripts/content/wechat-draft.ts",
     "test": "npm run build --silent && node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "astro": "7.2.9"
+    "@astrojs/markdown-satteri": "0.3.8",
+    "astro": "7.2.9",
+    "sharp": "0.35.4",
+    "ultrahtml": "1.7.0"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
+    "@types/node": "24.13.4",
     "typescript": "6.0.3"
   }
 }
