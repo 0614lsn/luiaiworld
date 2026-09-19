@@ -23,6 +23,6 @@ const articles = (await getVisibleArticles()).sort(
   </header>
 
   <section class="archive-list" aria-label="文章列表">
-    {articles.map((article, index) => <ArticleCard article={article} index={index + 1} />)}
+    {articles.length ? articles.map((article, index) => <ArticleCard article={article} index={index + 1} />) : <p>暂无公开文章。</p>}
   </section>
 </BaseLayout>

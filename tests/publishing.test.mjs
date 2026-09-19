@@ -8,6 +8,7 @@ import { createSatteriMarkdownProcessor } from '@astrojs/markdown-satteri';
 import { ROOT, prepare, status, record, verifyRelease, sha256, withLock, inlineWechat } from '../scripts/content/core.mjs';
 import { wrapText } from '../scripts/content/wechat-cover.mjs';
 import { xhsFixture } from './helpers/xhs-fixture.mjs';
+import { siteTestPaths } from './helpers/site-fixture.mjs';
 
 const stringify = (value) => `${JSON.stringify(value, null, 2)}\n`;
 async function fixture(t) {
@@ -158,11 +159,13 @@ test('public build excludes all draft routes and draft content, and source paths
     }
     return html;
   };
-  const output = await scan(join(ROOT, 'dist'));
+  const { dist } = siteTestPaths(ROOT);
+  const output = await scan(dist);
   assert.doesNotMatch(output, /我把 Codex 的源码拆开看了看|本地草稿预览|initiative-and-follow-through|\.content[\\/]|WECHAT_APP_SECRET|DASHSCOPE_API_KEY/);
-  assert.match(output, /GPT-6 Astra 官方提示指南/);
+  assert.match(output, /测试文章：内容与代码分离/);
+  assert.doesNotMatch(output, /PRIVATE_DRAFT_SHOULD_NOT_APPEAR/);
   assert.match(output, /湘ICP备2026038846号-1/);
-  await assert.rejects(readFile(join(ROOT, 'dist/articles/codex-harness-beyond-model/index.html')), { code: 'ENOENT' });
+  await assert.rejects(readFile(join(dist, 'articles/private-draft/index.html')), { code: 'ENOENT' });
   const ignored = execFileSync('git', ['check-ignore', 'content-projects/example/article.md', 'content-projects/example/sources/original.md'], { cwd: ROOT, encoding: 'utf8' });
   assert.ok(ignored.includes('content-projects/example/article.md'));
 });

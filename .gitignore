@@ -14,3 +14,10 @@ Thumbs.db
 .content/
 content-projects/*
 !content-projects/README.md
+
+# Authoring content and internal engineering/operations records stay local.
+/docs/development/
+/src/content/articles/*
+!/src/content/articles/.gitkeep
+/src/assets/content/
+/public/content/

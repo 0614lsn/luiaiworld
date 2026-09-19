@@ -1,17 +1,18 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { extname, join, sep } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { siteTestPaths, articleFixture } from './helpers/site-fixture.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const dist = join(root, 'dist');
-const read = (relativePath) => readFileSync(join(root, relativePath), 'utf8');
+const { dist, base } = siteTestPaths(root);
+const read = relativePath => readFileSync(relativePath.startsWith('dist/') ? join(dist, relativePath.slice(5)) : join(root, relativePath), 'utf8');
 
 const routes = new Map([
   ['/', 'dist/index.html'],
   ['/articles/', 'dist/articles/index.html'],
-  ['/articles/gpt-6-astra/', 'dist/articles/gpt-6-astra/index.html'],
+  ['/articles/test-guide/', 'dist/articles/test-guide/index.html'],
   ['/about/', 'dist/about/index.html'],
   ['/404.html', 'dist/404.html'],
 ]);
@@ -54,9 +55,19 @@ function contrastRatio(first, second) {
   return (values[0] + 0.05) / (values[1] + 0.05);
 }
 
+test('a code-only checkout renders useful pages without any authored articles', () => {
+  const home = readFileSync(join(base, 'empty-home.html'), 'utf8');
+  const archive = readFileSync(join(base, 'empty-archive.html'), 'utf8');
+  assert.match(home, /文章正在准备中/);
+  assert.match(home, /href="\/articles\/"/);
+  assert.doesNotMatch(home, /href="\/articles\/[^"/]+\//);
+  assert.match(archive, /暂无公开文章/);
+  assert.doesNotMatch(archive, /href="\/articles\/[^"/]+\//);
+});
+
 test('static build contains every required route and a resolvable internal link graph', () => {
   for (const [route, relativePath] of routes) {
-    assert.ok(existsSync(join(root, relativePath)), `missing output for ${route}`);
+    assert.ok(existsSync(join(dist, relativePath.slice(5))), `missing output for ${route}`);
   }
   assert.ok(existsSync(join(dist, 'favicon.svg')), 'missing built favicon');
 
@@ -87,14 +98,14 @@ test('every route has unique SEO metadata and the article has publication metada
     assert.equal(ogDescription, description);
     assert.equal(ogUrl, canonical);
     assert.equal(canonical, new URL(route, 'https://luiaiworld.com').href);
-    assert.equal(ogType, route.includes('/gpt-6-astra/') ? 'article' : 'website');
+    assert.equal(ogType, route.includes('/test-guide/') ? 'article' : 'website');
     titles.push(title);
   }
 
   assert.equal(new Set(titles).size, routes.size, 'page titles must be unique');
 
-  const articleHtml = read(routes.get('/articles/gpt-6-astra/'));
-  assert.match(articleHtml, /<meta property="article:published_time" content="2026-09-07T/);
+  const articleHtml = read(routes.get('/articles/test-guide/'));
+  assert.match(articleHtml, /<meta property="article:published_time" content="2026-01-02T/);
 });
 
 test('built pages retain semantic accessibility landmarks', () => {
@@ -109,18 +120,20 @@ test('built pages retain semantic accessibility landmarks', () => {
   }
 });
 
-test('published guide replaces the retired article and preserves every literal prompt', () => {
-  const html = read(routes.get('/articles/gpt-6-astra/'));
-  assert.equal(existsSync(join(dist, 'articles/codex-harness-beyond-model/index.html')), false);
+test('published synthetic article preserves attribution and every literal prompt while drafts stay excluded', () => {
+  const html = read(routes.get('/articles/test-guide/'));
+  assert.match(html, /测试来源/);
+  assert.match(html, /https:\/\/example.test\/source/);
+  assert.equal(existsSync(join(dist, 'articles/private-draft/index.html')), false);
   for (const page of ['dist/index.html', 'dist/articles/index.html']) {
-    assert.match(read(page), /href="\/articles\/gpt-6-astra\/"/);
-    assert.doesNotMatch(read(page), /href="\/articles\/codex-harness-beyond-model\/"/);
+    assert.match(read(page), /href="\/articles\/test-guide\/"/);
+    assert.doesNotMatch(read(page), /href="\/articles\/private-draft\/"/);
   }
-  const source = read('src/content/articles/gpt-6-astra.md');
+  const source = articleFixture;
   const prompts = [...source.matchAll(/^```[^\n]*\n([\s\S]*?)^```\s*$/gm)].map(m => m[1].replaceAll('\r\n','\n'));
   const decode = s => s.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll('&quot;','"').replaceAll('&#39;',"'").replaceAll('&amp;','&');
   const rendered = [...html.matchAll(/<pre\b[^>]*>[\s\S]*?<code\b[^>]*>([\s\S]*?)<\/code>[\s\S]*?<\/pre>/g)].map(m => decode(m[1].replace(/<[^>]+>/g,'')).replaceAll('\r\n','\n'));
-  assert.equal(prompts.length, 12);
+  assert.equal(prompts.length, 3);
   assert.equal(rendered.length, prompts.length);
   for (let i=0;i<prompts.length;i++) assert.equal(rendered[i].replace(/\n$/, ''), prompts[i].replace(/\n$/, ''));
   assert.match(html, /navigator.clipboard|clipboard.writeText/);
@@ -147,7 +160,7 @@ test('output remains static, self-contained and low-bandwidth aware', () => {
   for (const [route, relativePath] of routes) {
     const html = read(relativePath);
     const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
-    if (!route.includes('/gpt-6-astra/')) {
+    if (!route.includes('/test-guide/')) {
       assert.equal(scripts.length, 0, 'non-article pages must not load client scripts');
       assert.doesNotMatch(html, /navigator\.clipboard/);
     }
@@ -186,10 +199,11 @@ test('output remains static, self-contained and low-bandwidth aware', () => {
   assert.doesNotMatch(css, /color:\s*var\(--red-accent\)/);
 
   const sourceAstro = filesBelow(join(root, 'src'))
-    .filter((path) => ['.astro', '.ts', '.md'].includes(extname(path)))
+    .filter((path) => ['.astro', '.ts'].includes(extname(path)))
     .map((path) => readFileSync(path, 'utf8'))
     .join('\n');
   assert.doesNotMatch(sourceAstro, /client:(?:load|idle|visible|media|only)/);
-  assert.equal(filesBelow(join(root, 'public')).filter((path) => extname(path) === '.png').length, 0);
+  const articleAssets = join(root, 'public/content') + sep;
+  assert.equal(filesBelow(join(root, 'public')).filter(path => !path.startsWith(articleAssets) && extname(path) === '.png').length, 0);
   assert.equal(existsSync(join(dist, 'codex-architecture')), false, 'raw diagram directory copied to dist');
 });

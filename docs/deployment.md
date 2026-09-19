@@ -1,30 +1,24 @@
 # 个人站部署与维护
 
-网站是 Astro 静态站。Node.js 在本地构建，ECS 上由 Nginx 提供静态 HTML/CSS；无需常驻 Node 应用、数据库或 CMS。
+网站是 Astro 静态站，在本机生成 `dist/`，由目标主机的静态 Web 服务提供内容。运行时不需要 Node 应用、数据库或 CMS。
 
-## 当前部署
+## 内容与代码分别保存
 
-- 正式域名：`https://luiaiworld.com/`，www 也可访问。
-- 既有 SSH 别名：`luiaiworld`。认证使用本机现有密钥配置，不复制密钥到内容项目。
-- 线上根目录：`/var/www/luiaiworld/current`，指向 releases 下的已部署静态版本。
-- Nginx 配置：`/etc/nginx/sites-available/luiaiworld`。
-- HTTPS 由 Certbot 管理，certbot.timer 自动续期，首次部署的模拟续期已成功。
-- 用户自行处理公安联网备案；证件或备案个人材料不进入公开仓库。
+代码仓库不分发真实文章。作者在本机 `src/content/articles/` 维护正文，文章资源放入被忽略的 `src/assets/content/` 或 `public/content/`。这些内容必须有独立备份；新克隆默认显示空文章列表，不能直接用于替换已有线上内容。
+
+生成包、平台回执、开发与验收材料、具体主机别名和运维记录都留在本机。已有项目的实际部署记录可在本地 `docs/development/deployment-local.md` 查阅，该文件不随 GitHub 仓库分发。
 
 ## 审核后如何上线
 
-用户明确确认要上线的内容项目及版本后，由 Codex 将已审核网站稿放入 `src/content/articles/`，设置 published 状态，执行检查和构建。上传只包含 dist 的新版本目录，校验后切换 current 符号链接，并从公网核对正文及资源。旧版本保留一份用于回退。
+1. 确认本次文章、资源和发布范围；把已审核文章放入本机正式内容目录，并将状态设为 `published`。
+2. 停止草稿预览，执行 `npm run check`、`npm test`、`npm run build`。测试使用合成文章；最后的普通 build 才使用本机真实正文生成正式 `dist/`。
+3. 使用本机已经核实的连接入口，将 `dist/` 上传到目标主机的新版本目录，不上传源项目、账号配置或内部记录。
+4. 校验目标文件后切换正在服务的版本，保留上一版本用于回退，并从公网核对文章和资源。
 
-用户也可以自行执行这些部署操作；目前没有后台发布按钮。最方便的人工发布入口是明确发出“把已审核的某内容项目部署到个人站”，这一步不会由准备草稿流程自动触发。
+正式部署须有用户针对具体内容与目标的明确指示。准备草稿、通过测试和推送代码都不会自动部署网站，也不会授权修改 DNS、防火墙或账号权限。
 
-常用只读检查：
+## 配置与维护
 
-```bash
-ssh luiaiworld 'sudo nginx -t'
-ssh luiaiworld 'sudo systemctl status nginx --no-pager'
-ssh luiaiworld 'sudo systemctl status certbot.timer --no-pager'
-```
+`scripts/deploy/` 中的配置用于理解当前项目的静态站和受限公众号转发方式；在新主机采用前须核对域名、目录、部署用户与现有配置，不能直接覆盖已经配置好的 HTTPS。主机别名、认证材料和账号凭据保存在本机配置中，不写入仓库。
 
-`scripts/deploy/nginx-http.conf` 仅用于首次 HTTP 引导，不要用它覆盖已经由 Certbot 配置好 TLS 的线上文件。`30-wechat-forwarding.conf` 是公众号官方 API 的受限 SSH 转发配置，与网站内容部署无关。
-
-部署不要求先推送 GitHub。提交、推送、再次修改 DNS／防火墙等外部动作只按当次明确指示执行，不沿用已结束的旧 LDP 任务授权。
+修改 Web 服务配置后先检查语法，再重载服务；定期核对 HTTPS 证书续期与回滚版本。具体命令及目标路径以本机运维记录为准。

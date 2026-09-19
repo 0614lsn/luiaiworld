@@ -15,7 +15,7 @@
     "content:prune": "node scripts/content/prune.mjs",
     "content:hub": "node scripts/content/hub.mjs",
     "wechat:draft": "npx --yes bun scripts/content/wechat-draft.ts",
-    "test": "npm run build --silent && node --test tests/*.test.mjs"
+    "test": "node scripts/test.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-satteri": "0.3.8",

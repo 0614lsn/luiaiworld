@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = path => readFileSync(join(root, path), 'utf8');
 
@@ -37,13 +38,10 @@ test('content collection uses the Content Layer glob loader and validates metada
   assert.match(config, /sourceBaseline: z\.string\(\)\.regex\(\/\^\[0-9a-f\]\{40\}\$\/\)/);
 });
 
-test('published guide retains its source, attribution and all prompt blocks', () => {
-  const article = read('src/content/articles/gpt-6-astra.md');
-  assert.match(article, /^status: published$/m);
-  assert.match(article, /^featured: true$/m);
-  assert.ok(article.includes('https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra'));
-  assert.ok(article.includes('本文不代表 OpenAI 官方中文发布'));
-  assert.equal([...article.matchAll(/^```[^\n]*\n[\s\S]*?^```\s*$/gm)].length, 12);
+test('real manuscripts, generated assets and internal development records stay outside Git', () => {
+  for (const path of ['src/content/articles/private-example.md', 'docs/development/local-plan.md', 'src/assets/content/photo.png', 'public/content/cover.png', 'content-projects/example/article.md', '.content/delivery/jobs/example.json']) {
+    assert.equal(execFileSync('git', ['check-ignore', '--no-index', path], { cwd: root, encoding: 'utf8' }).trim(), path);
+  }
 });
 
 test('README exposes only the verified local path', () => {

@@ -2,7 +2,7 @@
 
 每期内容一个目录，目录名就是 `content` 命令使用的文章 ID，例如 `gpt-6-astra-model-guidance`。
 
-`_planning/` 保存本地创作规划资料和初始选题记录，不是文章项目，也不作为 `content prepare` 的输入；通用功能规格保存在 `docs/development/`。
+`_planning/` 保存本地创作规划资料和初始选题记录，不是文章项目，也不作为 `content prepare` 的输入；内部规格与开发过程记录只在本机维护，不随仓库分发。
 
 ```text
 <文章ID>/

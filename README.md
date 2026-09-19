@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-打开终端输出的本地地址，即可浏览首页、文章列表和已公开文章。网站源码使用 Astro 与 TypeScript，构建结果是静态 HTML、CSS 和少量交互脚本；文章中的提示词块支持复制与自然换行。
+打开终端输出的本地地址，即可浏览首页和文章列表。仓库只分发代码与使用说明，新克隆默认没有文章；实际正文在本机 `src/content/articles/` 中维护，不进入 Git。网站源码使用 Astro 与 TypeScript，构建结果是静态 HTML、CSS 和少量交互脚本；文章中的提示词块支持复制与自然换行。
 
 运行网站不需要公众号或小红书账号，也不依赖本机的私人内容项目。
 
@@ -80,7 +80,7 @@ npm run content -- preview gpt-6-astra-model-guidance
 | --- | --- |
 | `npm run dev` | 启动网站开发环境 |
 | `npm run check` | 检查 Astro 与 TypeScript |
-| `npm test` | 构建网站并运行测试 |
+| `npm test` | 用隔离的空内容与合成文章构建并运行测试，不依赖真实原稿 |
 | `npm run build` | 生成 `dist/` 静态文件 |
 | `npm run preview` | 预览已经构建的静态网站 |
 
@@ -88,9 +88,10 @@ npm run content -- preview gpt-6-astra-model-guidance
 
 ## 内容与代码的存放边界
 
-- `src/`、`public/`：网站源码与公开资源；正式文章位于 `src/content/articles/`，普通构建只展示 `published` 状态的文章。
+- `src/`、`public/`：网站源码与界面资源。真实正文在被忽略的 `src/content/articles/`；文章专用图片放 `src/assets/content/` 或 `public/content/`，同样不进入 Git。普通构建只展示本机 `published` 状态的文章。
 - `content-projects/`：作者日常使用的内容项目，默认不进入 Git，也不直接进入网站构建。
 - `.content/`：内部版本包、状态、清理回执与恢复材料，无需作为日常创作入口。
 - `scripts/`、`tests/`：内容处理、部署辅助与验证代码。
+- `docs/development/`：本地规格、计划、验收与运维记录，不进入 Git；README、通用使用说明和项目 skill 保留公开。
 
-每期内容以自己的项目说明和平台回执为交付入口。当前平台选择功能见 [逐站交付结果](docs/development/2026-09-19-selective-draft-delivery-result.md)，早期按钮验收见 [统一草稿交付结果](docs/development/2026-09-12-unified-draft-delivery-result.md)。
+每期内容以本机项目说明和平台回执为交付入口；公开使用方法见 [内容工作流](docs/content-workflow.md)。取消 Git 跟踪不会删除本机文件，也不会清除旧提交历史。真实内容需另行备份，不能把代码仓库当作文章备份。

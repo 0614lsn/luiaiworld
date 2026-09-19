@@ -6,11 +6,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 const articles = (await getVisibleArticles()).sort(
   (a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf(),
 );
-const featured = articles.find((article) => article.data.featured);
-
-if (!featured) {
-  throw new Error('首页需要至少一篇精选文章');
-}
+const featured = articles.find((article) => article.data.featured) ?? articles[0];
 ---
 
 <BaseLayout
@@ -29,8 +25,8 @@ if (!featured) {
       <p>
         不追赶每一条喧闹的消息。沿着源码、系统和真实项目，弄清智能怎样落进现实。
       </p>
-      <a class="hero-link" href={`/articles/${featured.id}/`}>
-        阅读首篇文章 <span aria-hidden="true">↗</span>
+      <a class="hero-link" href={featured ? `/articles/${featured.id}/` : '/articles/'}>
+        {featured ? '阅读文章' : '浏览文章'} <span aria-hidden="true">↗</span>
       </a>
     </div>
     <aside class="home-hero__manifesto" aria-label="本站关注方向">
@@ -48,7 +44,7 @@ if (!featured) {
       <p class="eyebrow">FEATURED / 精选</p>
       <h2 id="featured-title">从问题出发，把方法写清楚</h2>
     </div>
-    <ArticleCard article={featured} index={1} />
+    {featured ? <ArticleCard article={featured} index={1} /> : <p>文章正在准备中，敬请期待。</p>}
   </section>
 
   <section class="home-notes page-grid" aria-labelledby="notes-title">
