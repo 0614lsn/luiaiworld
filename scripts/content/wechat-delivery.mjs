@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname, join, resolve, relative, isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { parse, renderSync } from 'ultrahtml';
-import { sha256, verifyRelease, withLock } from './core.mjs';
+import { sha256, verifyRelease, withLock, releasePlatforms } from './core.mjs';
 import { renderWechatEditorialTheme, inspectWechatArticle } from './wechat-editorial-theme.mjs';
 
 const readJson = async (file, fallback = null) => {
@@ -75,6 +75,7 @@ async function saveReadback(directory, draft, receipt) {
 export async function deliverWechat(root, slug, release, transport) {
   return withLock(root, `wechat-${slug}`, async () => {
     const pack = await verifyRelease(root, slug, release, { current: true });
+    if (!releasePlatforms(pack.manifest).includes('wechat')) throw new Error('此内容包未选择微信公众号');
     const projectDirectory = join(root, 'content-projects', slug);
     const directory = join(projectDirectory, 'platforms', 'wechat');
     const project = await readJson(join(projectDirectory, 'project.json'), {});

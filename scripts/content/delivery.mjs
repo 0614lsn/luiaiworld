@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir, rename, readdir, copyFile, lstat, realpath 
 import { join, dirname, resolve, sep } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { getInputs, prepare, verifyRelease, sha256 } from './core.mjs';
+import { getInputs, prepare, verifyRelease, sha256, PLATFORMS, selectPlatforms } from './core.mjs';
 
 export async function readJson(file, fallback = null) {
   try { return JSON.parse(await readFile(file, 'utf8')); }
@@ -35,8 +35,12 @@ export function verifyXhsProof(job, proof) {
   return true;
 }
 export function summarize(job) {
-  const rows = Object.values(job.platforms);
+  const rows = jobPlatforms(job).map(platform => job.platforms[platform]);
   return rows.every(row => row.stage === 'draft_saved') ? 'complete' : rows.some(row => !['queued', 'preparing', 'awaiting_browser', 'draft_saved'].includes(row.stage)) ? 'attention' : 'running';
+}
+export const jobPlatforms = job => selectPlatforms(job.selectedPlatforms ?? PLATFORMS);
+function requireXhs(job) {
+  if (!jobPlatforms(job).includes('xiaohongshu')) throw new Error('本任务未选择小红书');
 }
 export function runWechat(root, slug, release) {
   return new Promise((done) => {
@@ -74,32 +78,44 @@ export class DeliveryService {
     const projects = [];
     for (const e of entries) {
       if (!e.isDirectory() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(e.name)) continue;
-      try { const input = await getInputs(this.root, e.name); projects.push({ id: e.name, title: input.metadata.title, ready: true }); }
-      catch { projects.push({ id: e.name, title: e.name, ready: false, message: '请先完成 article.md 与匹配的小红书改写 xiaohongshu.json' }); }
+      const availability = {}; let title = e.name;
+      for (const platform of PLATFORMS) {
+        try { const input = await getInputs(this.root, e.name, { platforms: [platform] }); title = input.metadata.title; availability[platform] = { ready: true }; }
+        catch { availability[platform] = { ready: false, message: platform === 'xiaohongshu' ? '请先用 baoyu-xhs-images 完成本篇图片，并核对 xiaohongshu.json 文案、图片清单和提示词文件' : '请完成有效的 article.md 与正文附件' }; }
+      }
+      projects.push({ id: e.name, title, ready: Object.values(availability).some(row => row.ready), availability });
     }
     return projects;
   }
-  async start(slug, inputTarget) {
+  async assertNoUnknownXhs(slug, instanceId, exceptId) {
+    const index = await readJson(join(this.root, '.content/delivery/index.json'), {});
+    for (const id of new Set(Object.values(index))) {
+      if (id === exceptId) continue;
+      const previous = await this.get(id);
+      if (previous.slug === slug && previous.target?.instanceId === instanceId && jobPlatforms(previous).includes('xiaohongshu') && ['submission_unknown', 'saving'].includes(previous.platforms.xiaohongshu.stage)) throw new Error('本项目有待核实的小红书保存，先恢复旧任务');
+    }
+  }
+  async start(slug, inputTarget, platforms) {
     return this.serial(async () => {
       await projectPath(this.root, slug);
-      const target = validateTarget(inputTarget), input = await getInputs(this.root, slug);
-      const key = sha256(JSON.stringify({ slug, release: input.releaseHash, target }));
+      if (platforms === undefined) throw new Error('请更新交付扩展并明确选择本次平台');
+      const selectedPlatforms = selectPlatforms(platforms);
+      const target = selectedPlatforms.includes('xiaohongshu') ? validateTarget(inputTarget) : null;
+      const input = await getInputs(this.root, slug, { platforms: selectedPlatforms });
+      const key = sha256(JSON.stringify({ slug, release: input.releaseHash, selectedPlatforms, target }));
       const indexPath = join(this.root, '.content/delivery/index.json'), index = await readJson(indexPath, {});
+      if (target) await this.assertNoUnknownXhs(slug, target.instanceId, index[key]);
       if (index[key]) {
         const old = await this.get(index[key]);
         if (!this.active.has(old.id)) {
           // Revalidate the browser-local draft even when an older receipt said saved.
-          if (old.platforms.xiaohongshu.stage === 'draft_saved') old.platforms.xiaohongshu = { ...old.platforms.xiaohongshu, stage: 'awaiting_browser', requireExisting: true };
+          if (selectedPlatforms.includes('xiaohongshu') && old.platforms.xiaohongshu.stage === 'draft_saved') old.platforms.xiaohongshu = { ...old.platforms.xiaohongshu, stage: 'awaiting_browser', requireExisting: true };
           await this.save(old); this.process(old.id);
         }
         return old;
       }
-      // A lost save response must not be bypassed by changing source or job ID.
-      for (const id of new Set(Object.values(index))) {
-        const previous = await this.get(id);
-        if (previous.slug === slug && previous.target.instanceId === target.instanceId && ['submission_unknown', 'saving'].includes(previous.platforms.xiaohongshu.stage)) throw new Error('本项目有待核实的小红书保存，先恢复旧任务');
-      }
-      const job = { version: 1, id: randomUUID(), key, slug, release: input.releaseHash, sourceHash: sha256(input.source), target, createdAt: new Date().toISOString(), platforms: { website: { stage: 'queued' }, wechat: { stage: 'queued' }, xiaohongshu: { stage: 'queued' } } };
+      const rows = Object.fromEntries(PLATFORMS.map(platform => [platform, selectedPlatforms.includes(platform) ? { stage: 'queued' } : { stage: 'skipped', message: '本次未选择，不生成或保存草稿' }]));
+      const job = { version: 2, id: randomUUID(), key, slug, release: input.releaseHash, sourceHash: sha256(input.source), selectedPlatforms, target, createdAt: new Date().toISOString(), platforms: rows };
       await this.save(job); index[key] = job.id; await atomic(indexPath, index); this.process(job.id); return job;
     });
   }
@@ -114,62 +130,81 @@ export class DeliveryService {
   async resume(id, instanceId) {
     return this.serial(async () => {
       const job = await this.get(id);
-      if (job.target.instanceId !== instanceId) throw new Error('请在原 Edge profile 恢复任务');
+      const selected = jobPlatforms(job);
+      if (selected.includes('xiaohongshu') && job.target.instanceId !== instanceId) throw new Error('请在原 Edge profile 恢复任务');
       await verifyRelease(this.root, job.slug, job.release, { current: false });
       if (job.xhs && job.platforms.xiaohongshu.stage === 'submission_unknown') return job;
       if (this.active.has(id)) return job;
-      const current = await getInputs(this.root, job.slug);
+      const current = await getInputs(this.root, job.slug, { platforms: selected });
       if (current.releaseHash !== job.release) throw new Error('本地版本已变化，旧任务仅允许核实未知提交；请交付新版本');
-      if (job.platforms.xiaohongshu.stage === 'draft_saved') job.platforms.xiaohongshu = { ...job.platforms.xiaohongshu, stage: 'awaiting_browser', requireExisting: true };
+      if (selected.includes('xiaohongshu') && job.platforms.xiaohongshu.stage === 'draft_saved') job.platforms.xiaohongshu = { ...job.platforms.xiaohongshu, stage: 'awaiting_browser', requireExisting: true };
       await this.save(job); this.process(id); return job;
     });
   }
   async prepareJob(id) {
     let job;
-    await this.serial(async () => { job = await this.get(id); job.platforms.website = { stage: 'preparing', message: '正在验证本地工作稿' }; job.platforms.wechat = { stage: 'queued' }; await this.save(job); });
-    const pack = await prepare(this.root, job.slug);
+    await this.serial(async () => {
+      job = await this.get(id);
+      for (const platform of jobPlatforms(job).filter(platform => platform !== 'xiaohongshu')) job.platforms[platform] = { stage: 'preparing', message: '正在验证本地工作稿' };
+      await this.save(job);
+    });
+    const selected = jobPlatforms(job);
+    const pack = await prepare(this.root, job.slug, { platforms: selected });
     if (pack.releaseHash !== job.release) throw new Error('任务期间工作稿已变化，请重新交付');
     const { manifest } = await verifyRelease(this.root, job.slug, job.release);
     const project = await projectPath(this.root, job.slug);
-    const draftDirectory = join(project, 'platforms/website/draft');
-    // The local draft is a separate directory from previously published artifacts.
-    const websiteReceipt = await readJson(join(draftDirectory, 'receipt.json'));
-    const existing = await readFile(join(draftDirectory, 'article.md'), 'utf8').catch(e => e.code === 'ENOENT' ? null : Promise.reject(e));
-    if (existing && (!websiteReceipt || sha256(existing) !== websiteReceipt.bodyHash)) throw new Error('网站交付稿被人工修改，请先合并回工作稿');
-    const website = Object.keys(manifest.artifacts).filter(name => name.startsWith('website/'));
-    const websiteFiles = Object.fromEntries(website.map(name => [name === `website/${job.slug}.md` ? 'article.md' : name.slice(8), manifest.artifacts[name]]));
-    for (const [file, digest] of Object.entries(websiteReceipt?.files ?? {})) {
-      if (!Object.hasOwn(websiteFiles, file)) throw new Error('新版已移除网站附件；请先整理本地上一版附件，未自动删除');
-      const current = await readFile(join(draftDirectory, file));
-      if (sha256(current) !== digest) throw new Error('网站草稿附件被人工修改，请先合并回工作稿');
+    if (selected.includes('website')) {
+      const draftDirectory = join(project, 'platforms/website/draft');
+      // The local draft is a separate directory from previously published artifacts.
+      const websiteReceipt = await readJson(join(draftDirectory, 'receipt.json'));
+      const existing = await readFile(join(draftDirectory, 'article.md'), 'utf8').catch(e => e.code === 'ENOENT' ? null : Promise.reject(e));
+      if (existing && (!websiteReceipt || sha256(existing) !== websiteReceipt.bodyHash)) throw new Error('网站交付稿被人工修改，请先合并回工作稿');
+      const website = Object.keys(manifest.artifacts).filter(name => name.startsWith('website/'));
+      const websiteFiles = Object.fromEntries(website.map(name => [name === `website/${job.slug}.md` ? 'article.md' : name.slice(8), manifest.artifacts[name]]));
+      for (const [file, digest] of Object.entries(websiteReceipt?.files ?? {})) {
+        if (!Object.hasOwn(websiteFiles, file)) throw new Error('新版已移除网站附件；请先整理本地上一版附件，未自动删除');
+        const current = await readFile(join(draftDirectory, file));
+        if (sha256(current) !== digest) throw new Error('网站草稿附件被人工修改，请先合并回工作稿');
+      }
+      for (const file of Object.keys(websiteFiles).filter(file => file !== 'article.md')) {
+        const local = await readFile(join(draftDirectory, file)).catch(e => e.code === 'ENOENT' ? null : Promise.reject(e));
+        if (local && !websiteReceipt?.files?.[file]) throw new Error('草稿目标已有未登记的附件，停止覆盖');
+      }
+      await mkdir(draftDirectory, { recursive: true });
+      for (const name of website) {
+        const relative = name === `website/${job.slug}.md` ? 'article.md' : name.slice(8);
+        await mkdir(dirname(join(draftDirectory, relative)), { recursive: true });
+        await copyFile(join(pack.directory, name), join(draftDirectory, relative));
+      }
+      await atomic(join(draftDirectory, 'receipt.json'), { stage: 'draft_saved', release: job.release, bodyHash: manifest.sourceHash, files: websiteFiles, publiclyPublished: false, at: new Date().toISOString() });
     }
-    for (const file of Object.keys(websiteFiles).filter(file => file !== 'article.md')) {
-      const local = await readFile(join(draftDirectory, file)).catch(e => e.code === 'ENOENT' ? null : Promise.reject(e));
-      if (local && !websiteReceipt?.files?.[file]) throw new Error('草稿目标已有未登记的附件，停止覆盖');
+    let xhs;
+    if (selected.includes('xiaohongshu')) {
+      const post = await readJson(join(pack.directory, 'xiaohongshu/post.json'));
+      const cards = Object.entries(manifest.artifacts).filter(([name]) => /^xiaohongshu\/cards\/\d+\.png$/.test(name)).sort(([a], [b]) => a.localeCompare(b)).map(([file, sha256]) => ({ file, sha256 }));
+      xhs = { ...post, cards, payloadHash: sha256(JSON.stringify({ post, cards })) };
     }
-    await mkdir(draftDirectory, { recursive: true });
-    for (const name of website) {
-      const relative = name === `website/${job.slug}.md` ? 'article.md' : name.slice(8);
-      await mkdir(dirname(join(draftDirectory, relative)), { recursive: true });
-      await copyFile(join(pack.directory, name), join(draftDirectory, relative));
-    }
-    await atomic(join(draftDirectory, 'receipt.json'), { stage: 'draft_saved', release: job.release, bodyHash: manifest.sourceHash, files: websiteFiles, publiclyPublished: false, at: new Date().toISOString() });
-    const post = await readJson(join(pack.directory, 'xiaohongshu/post.json'));
-    const cards = Object.entries(manifest.artifacts).filter(([name]) => /^xiaohongshu\/cards\/\d+\.png$/.test(name)).sort(([a], [b]) => a.localeCompare(b)).map(([file, sha256]) => ({ file, sha256 }));
     await this.serial(async () => {
       job = await this.get(id);
-      job.xhs = { ...post, cards, payloadHash: sha256(JSON.stringify({ post, cards })) };
-      job.platforms.website = { stage: 'draft_saved', path: `content-projects/${job.slug}/platforms/website/draft/article.md`, message: '网站草稿已保存本地，未部署' };
-      if (!['submission_unknown', 'draft_saved'].includes(job.platforms.xiaohongshu.stage)) job.platforms.xiaohongshu = { ...job.platforms.xiaohongshu, stage: 'awaiting_browser', message: '等待 Edge 核对并保存图文草稿' };
-      job.platforms.wechat = { stage: 'preparing', message: '正在核对公众号草稿' }; await this.save(job);
+      if (selected.includes('website')) job.platforms.website = { stage: 'draft_saved', path: `content-projects/${job.slug}/platforms/website/draft/article.md`, message: '网站草稿已保存本地，未部署' };
+      if (xhs) {
+        job.xhs = xhs;
+        if (!['submission_unknown', 'draft_saved'].includes(job.platforms.xiaohongshu.stage)) job.platforms.xiaohongshu = { ...job.platforms.xiaohongshu, stage: 'awaiting_browser', message: '等待 Edge 核对并保存图文草稿' };
+      }
+      if (selected.includes('wechat')) job.platforms.wechat = { stage: 'preparing', message: '正在核对公众号草稿' };
+      await this.save(job);
     });
-    const wechat = await this.wechat(this.root, job.slug, job.release);
-    await this.serial(async () => { job = await this.get(id); job.platforms.wechat = wechat; await this.save(job); });
+    if (selected.includes('wechat')) {
+      const wechat = await this.wechat(this.root, job.slug, job.release);
+      await this.serial(async () => { job = await this.get(id); job.platforms.wechat = wechat; await this.save(job); });
+    }
   }
   async xhsAttempt(id, instanceId) {
     return this.serial(async () => {
       const job = await this.get(id);
+      requireXhs(job);
       if (instanceId !== job.target.instanceId || job.platforms.xiaohongshu.stage !== 'awaiting_browser' || job.platforms.xiaohongshu.requireExisting) throw new Error('不能再次保存；请回读已有或未确认的草稿');
+      await this.assertNoUnknownXhs(job.slug, instanceId, job.id);
       await verifyRelease(this.root, job.slug, job.release);
       const attemptId = randomUUID();
       job.platforms.xiaohongshu = { stage: 'submission_unknown', attemptId, message: '已发放一次保存操作，正在等待草稿箱回读' };
@@ -179,6 +214,7 @@ export class DeliveryService {
   async xhsComplete(id, instanceId, proof) {
     return this.serial(async () => {
       const job = await this.get(id);
+      requireXhs(job);
       if (instanceId !== job.target.instanceId) throw new Error('浏览器 profile 与任务目标不符');
       if (!['awaiting_browser', 'submission_unknown', 'draft_saved'].includes(job.platforms.xiaohongshu.stage)) throw new Error('此任务尚未进入浏览器交付');
       verifyXhsProof(job, proof);
@@ -197,7 +233,7 @@ export class DeliveryService {
   }
   async xhsProblem(id, instanceId, message, imageEvidence) {
     return this.serial(async () => {
-      const job = await this.get(id); if (instanceId !== job.target.instanceId) throw new Error('目标不匹配');
+      const job = await this.get(id); requireXhs(job); if (instanceId !== job.target.instanceId) throw new Error('目标不匹配');
       const row = job.platforms.xiaohongshu; if (row.stage === 'draft_saved') return job;
       row.message = String(message).slice(0,400);
       if (imageEvidence && Number.isInteger(imageEvidence.index) && job.xhs?.cards[imageEvidence.index] && typeof imageEvidence.base64 === 'string' && imageEvidence.base64.length < 2000000) {
@@ -208,5 +244,5 @@ export class DeliveryService {
       if (row.stage !== 'submission_unknown') row.stage = 'blocked'; return this.save(job);
     });
   }
-  async card(id, index) { const job = await this.get(id); const card = job.xhs?.cards[index]; if (!card) throw new Error('图片不存在'); const bytes = await readFile(join(this.root, '.content/releases', job.release, card.file)); if (sha256(bytes) !== card.sha256) throw new Error('图片已变动'); return bytes; }
+  async card(id, index) { const job = await this.get(id); requireXhs(job); const card = job.xhs?.cards[index]; if (!card) throw new Error('图片不存在'); const bytes = await readFile(join(this.root, '.content/releases', job.release, card.file)); if (sha256(bytes) !== card.sha256) throw new Error('图片已变动'); return bytes; }
 }

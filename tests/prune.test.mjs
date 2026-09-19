@@ -65,6 +65,18 @@ test('prune rejects directory links before deleting any artifacts', async t => {
   assert.equal(await readFile(join(outside, 'keep.txt'), 'utf8'), 'keep');
 });
 
+test('unselected platforms do not turn local-only versions into protected delivery history', async t => {
+  const f = await fixture(t);
+  f.state.releases[f.hashes[0]].platforms.wechat = { stage: 'skipped' };
+  f.state.releases[f.hashes[0]].platforms.xiaohongshu = { stage: 'skipped' };
+  await writeFile(f.statePath, json(f.state));
+  const plan = await planPrune(f.root, 'example');
+  assert.deepEqual(plan.remove.map(entry => entry.hash), [f.hashes[0]]);
+  f.state.releases[f.hashes[0]].platforms.website = { stage: 'draft_saved' };
+  await writeFile(f.statePath, json(f.state));
+  assert.equal((await planPrune(f.root, 'example')).remove.length, 0);
+});
+
 test('pending delivery tasks protect their exact historical package from pruning',async t=>{
   const f=await fixture(t); const before=await planPrune(f.root,'example');
   await mkdir(join(f.root,'.content/delivery/jobs'),{recursive:true});

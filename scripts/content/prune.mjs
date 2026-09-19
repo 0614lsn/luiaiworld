@@ -66,7 +66,7 @@ export async function planPrune(root, slug) {
     const reasons = [];
     if (!history) reasons.push('没有所属状态记录');
     if (entry.name === state.currentRelease) reasons.push('当前版本');
-    if (history?.events?.length || Object.values(history?.platforms ?? {}).some(p => p.stage !== 'local_ready' || p.approval || p.remoteId || p.url)) reasons.push('平台或审核历史');
+    if (history?.events?.length || Object.values(history?.platforms ?? {}).some(p => !['local_ready', 'skipped'].includes(p.stage) || p.approval || p.remoteId || p.url)) reasons.push('平台或审核历史');
     if (referencedHashes.some(prefix => entry.name.startsWith(prefix))) reasons.push('状态或文档引用');
     try { await verifyRelease(root, slug, entry.name, { current: false }); }
     catch { reasons.push('产物变化或不完整，保留人工修改'); }

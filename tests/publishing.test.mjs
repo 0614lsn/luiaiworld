@@ -6,7 +6,8 @@ import { execFileSync } from 'node:child_process';
 import sharp from 'sharp';
 import { createSatteriMarkdownProcessor } from '@astrojs/markdown-satteri';
 import { ROOT, prepare, status, record, verifyRelease, sha256, withLock, inlineWechat } from '../scripts/content/core.mjs';
-import { wrapText } from '../scripts/content/cards.mjs';
+import { wrapText } from '../scripts/content/wechat-cover.mjs';
+import { xhsFixture } from './helpers/xhs-fixture.mjs';
 
 const stringify = (value) => `${JSON.stringify(value, null, 2)}\n`;
 async function fixture(t) {
@@ -17,7 +18,7 @@ async function fixture(t) {
   const directory = join(root, 'content-projects', 'example');
   await mkdir(directory, { recursive: true });
   const article = '---\ntitle: "测试文章"\ndescription: "完整保留可复制提示词的草稿。"\npublishedAt: 2026-09-07\ntags: ["测试"]\nfeatured: true\nstatus: draft\n---\n\n## 中文标题\n\n正文 **强调**。\n\n```text\n<instruction>完整提示词\n下一行</instruction>\n```\n';
-  const xhs = { sourceHash: sha256(article), title: '测试标题', caption: '测试文案', cards: [{ kicker: '内容笔记', heading: '可读标题', summary: '简洁摘要。', prompt: '保留正文。', note: '来源说明。' }] };
+  const xhs = await xhsFixture(directory, sha256(article));
   await writeFile(join(directory, 'article.md'), article);
   await writeFile(join(directory, 'xiaohongshu.json'), stringify(xhs));
   return { root, directory, article, xhs, slug: 'example' };

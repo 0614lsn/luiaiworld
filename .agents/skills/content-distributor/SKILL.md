@@ -5,13 +5,27 @@ description: 在本项目以每期独立内容项目准备个人网站、微信�
 
 # 三平台内容准备与草稿交付
 
-先读根 README、docs/content-workflow.md、本期 content-projects/<id>/README.md 和 project.json。2026-09-12 用户确认统一交付按钮，固定使用日常 Edge 保存小红书草稿；默认不公开发表。
+先读根 README、docs/content-workflow.md、本期 content-projects/<id>/README.md 和 project.json。2026-09-19 用户要求逐篇选择目标平台，固定使用日常 Edge 保存小红书草稿；默认不公开发表。
+
+## 创作前先确定平台
+
+在生成任何平台专用文案或图片之前，先从用户当前指示确定本期目标平台。用户已明确说“只发公众号”等时直接沿用，不重复询问；没有明确时先询问平台，可以继续整理共用素材，但不得默认三站或提前生成三份平台稿。把确认结果记入本期 project.json 的 distributionDecision.selectedPlatforms。后续扩展勾选是交付范围确认，不是先生成后删除；取消勾选也不会删除历史内容。
 
 ## 内容管理
 
-每期新建 content-projects/<id>/。sources/ 保存原始资料，article.md 为唯一工作稿，assets/ 放实际正文附件，xiaohongshu.json 保存人工审阅过的平台改写，experiments/ 放试验，platforms/ 放各平台最新定稿、回读和回执。先保留用户文件，移动原始材料须验证字节不变。
+每期新建 content-projects/<id>/。sources/ 保存原始资料，article.md 为唯一工作稿，assets/ 放共用正文附件，xiaohongshu.json 保存审阅后的改写与有序图片清单，xiaohongshu/ 放本期专用图片、逐图提示词和创作记录，experiments/ 放试验，platforms/ 放各平台最新定稿、回读和回执。先保留用户文件，移动原始材料须验证字节不变。
 
-创作必须同时交付 article.md、与原稿匹配且已审阅的 xiaohongshu.json 和附件，不能只改 sourceHash 掩盖原稿变化。主入口为 npm run content:hub + Edge 的「LUI 三站草稿交付」按钮；content prepare / status / preview 保留为低层工具。prepare 本身不上传、不部署。网站为本地草稿，公众号为云端草稿，小红书为 Edge profile 本地草稿。
+创作交付 article.md 和附件；只有选中小红书才要求与原稿匹配且已审阅的 xiaohongshu.json 和实际图片，不能只改 sourceHash 掩盖原稿变化。主入口为 npm run content:hub + Edge 的「LUI 三站草稿交付」扩展，逐篇勾选平台后点击「交付所选草稿」。新项目默认空选，每篇记住选择；未选站完全跳过生成、存稿和回读，不删除其已有内容。只选网站或公众号时不要求小红书账号。低层 content prepare 必须显式传 --platforms <逗号分隔平台>，本身不上传、不部署。网站为本地草稿，公众号为云端草稿，小红书为 Edge profile 本地草稿。
+
+## 小红书图片创作
+
+每期需要创建或修改小红书配图时，必须使用已安装的 baoyu-xhs-images skill，根据本期内容制定分析、大纲、风格与图片方案，调用实际栅格生图后端。在 Codex 默认按该 skill 的后端规则使用原生 imagegen。不得以 SVG、HTML、Canvas 或固定排版代码替代，不得只写 skill 名称就声称已调用。
+
+调用生图前保存完整逐图提示词；生成后检查图片内容、文字和原图保留情况。把 skill 的 analysis.md、outline.md 等材料保存在本期 xiaohongshu/；交付图片放 xiaohongshu/images/，对应提示词放 xiaohongshu/prompts/。工具生成到默认目录时，复制真实结果到本期，不虚构文件。原图作为证据时保留，不自动重绘或换成文字摘要；选择用于上传的原图副本也放 images/，标记 kind: original，不为其伪造生图提示词。小红书专用图和 prompts 不放通用 assets/，避免混入未选站产物。
+
+xiaohongshu.json 使用 imageSkill: baoyu-xhs-images 和 images 有序清单；kind: generated 必须指向实际存在、非空的 prompt 文件，kind: original 可不带 prompt。字段及样例见 docs/content-workflow.md。记录的 skill 标签只是创作来源说明，实际调用依据仍是本轮工具结果和创作记录。
+
+prepare 与交付按钮只校验、打包、上传已经完成的图片，不会调用 skill 或模型，不会缺图时自动套文字模板。缺图片/提示词就报告小红书创作未完成；已审核图片可复用交付，不因再次点按钮而重新生图。旧 cards 文本脚本仅作为历史资料保留，不能用于新生成；需要重新交付时先用 skill 完成新的图片清单。已撤回文章不自动补做。
 
 ## 草稿交付
 
@@ -19,7 +33,7 @@ description: 在本项目以每期独立内容项目准备个人网站、微信�
 - 公众号：统一适配器 wechat-delivery.ts 通过 Baoyu 传输新增或回读草稿；已有稿保留平台人工修改，来源变化提示合并。手工更新仍用 wechat:draft read/update 并绑定最新 bodyHash。回执不硬编码到公共脚本。
 - 小红书：固定 Edge 扩展实例/profile 和明确账号。按钮使用独立页上传、暂存、重新打开，核对标题、正文、8 图或本期实际图数及图片顺序。不可拿 Codex 内置浏览器的旧回执作为 Edge 成功；不要退回内置浏览器另存。任务进度以 .content/delivery/jobs/ 为准。
 
-统一任务三项均 draft_saved 才报告完成。部分失败保留成功项；submission_unknown 必须按原 jobId 恢复只读核实，不重新保存。对失败原因如实报告，不能只做本地生成或人工填写回执后声称按钮端到端成功。首次连接由用户填写本机连接码，不要求把码或平台密钥发到聊天。
+统一任务的所选平台均 draft_saved 才报告完成，未选站为 skipped。恢复固定使用原任务平台集合，不能用页面新勾选覆盖。部分失败保留成功项；submission_unknown 必须按原 jobId 恢复只读核实，不通过改变平台组合或文案重复保存。对失败原因如实报告，不能只做本地生成或人工填写回执后声称按钮端到端成功。首次连接由用户填写本机连接码，不要求把码或平台密钥发到聊天。
 
 公众号旧草稿箱开关已废弃，无需用户查找。账号功能、API 权限和实际调用结果分别说明。浏览器被工具拒绝时不换浏览器、CDP、代理或抓取脚本绕过；官方 API 草稿操作不依赖后台浏览器会话。
 

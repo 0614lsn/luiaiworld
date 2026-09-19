@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LUI 三站草稿交付",
-  "version": "0.1.3",
-  "description": "把本地内容项目交付到网站本地草稿、公众号草稿箱与当前 Edge 的小红书草稿。",
+  "version": "0.3.0",
+  "description": "逐篇选择个人站、公众号或小红书，只向选中的平台交付草稿。",
   "permissions": ["storage", "scripting"],
   "host_permissions": ["http://127.0.0.1/*", "https://creator.xiaohongshu.com/*"],
   "action": { "default_title": "打开三站草稿交付" },

@@ -34,7 +34,7 @@ export function createHub({ root = ROOT, token, port = PORT, service = new Deliv
       const url = new URL(req.url, `http://127.0.0.1:${port}`), path = url.pathname;
       if (req.method === 'GET' && path === '/health') return send(200, { ok: true, version: 1 });
       if (req.method === 'GET' && path === '/projects') return send(200, await service.list());
-      if (req.method === 'POST' && path === '/deliver') { const data = await body(req); return send(202, await service.start(data.slug, data.target)); }
+      if (req.method === 'POST' && path === '/deliver') { const data = await body(req); return send(202, await service.start(data.slug, data.target, data.selectedPlatforms)); }
       const route = path.match(/^\/jobs\/([\da-f-]{36})(?:\/(resume|attempt|complete|problem|cards\/\d+))?$/);
       if (!route) return send(404, { error: '接口不存在' });
       const [, id, action] = route;

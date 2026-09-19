@@ -1,20 +1,32 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>三站草稿交付 · LUI AI WORLD</title><link rel="stylesheet" href="dashboard.css"></head>
 <body><main>
-  <header><span class="brand">LUI AI WORLD / CONTENT</span><h1>一次准备，三站待审。</h1><p>将写好的内容适配并交付到草稿位置，审核通过后由你发表。</p></header>
+  <header><span class="brand">LUI AI WORLD / CONTENT</span><h1>选好平台，再交付草稿。</h1><p>每篇内容由你决定交付到哪里，审核通过后由你发表。</p></header>
   <details id="setup"><summary>连接本地服务与 Edge 账号</summary><form id="connect-form">
     <p>先在项目运行 <code>npm run content:hub</code>，将 <code>.content/delivery/connection.txt</code> 中的连接码粘贴到这里。连接码只留在当前 Edge profile。</p>
     <label>本地连接码<input id="token" type="password" autocomplete="off" required minlength="64" maxlength="64"></label>
-    <div class="fields"><label>Edge profile 备注<input id="profile" placeholder="例如：日常使用的 Edge" required maxlength="80"></label><label>小红书账号显示名称<input id="account" placeholder="与创作平台右上角完全相同" required maxlength="100"></label></div>
+    <p>仅在选择小红书时，需要填写下面两项。</p>
+    <div class="fields"><label>Edge profile 备注<input id="profile" placeholder="例如：日常使用的 Edge" maxlength="80"></label><label>小红书账号显示名称<input id="account" placeholder="与创作平台右上角完全相同" maxlength="100"></label></div>
     <button class="secondary" type="submit">连接并保存</button><span id="connection" role="status"></span>
   </form></details>
-  <section class="action-panel"><label for="project">本期内容</label><div class="fields"><select id="project" aria-label="选择内容项目"></select><button id="deliver" disabled>交付三站草稿</button></div><p class="hint">内容创作由 Codex 与 skills 完成。这里负责渲染适配、保存草稿与回读核验。</p></section>
+  <section class="action-panel">
+    <label for="project">本期内容</label><select id="project" aria-label="选择内容项目"></select>
+    <fieldset id="platform-choice"><legend>本次交付平台</legend><div class="platform-options">
+      <label><input type="checkbox" name="platform" value="website">个人网站</label>
+      <label><input type="checkbox" name="platform" value="wechat">微信公众号</label>
+      <label><input type="checkbox" name="platform" value="xiaohongshu">小红书</label>
+    </div></fieldset>
+    <p id="selection-status" class="hint" role="status">请至少选择一个平台。</p>
+    <button id="deliver" disabled>交付所选草稿</button>
+    <p class="hint">创作前先确定目标平台。这里仅打包和保存已完成的内容；小红书图片由 Codex 使用 skill 提前生成，按钮不生图。未选中的平台不生成或保存草稿，也不会删除以前保存的内容。</p>
+  </section>
   <div id="notice" role="status" aria-live="polite">等待连接本地服务。</div>
+  <p id="task-platforms" class="hint" hidden></p>
   <section class="platforms" aria-label="三站交付状态">
     <article><span class="number">01</span><h2>个人网站</h2><p class="location">本地草稿</p><strong id="website-state">未开始</strong><p id="website-message"></p></article>
     <article><span class="number">02</span><h2>微信公众号</h2><p class="location">官方平台草稿箱</p><strong id="wechat-state">未开始</strong><p id="wechat-message"></p></article>
     <article><span class="number">03</span><h2>小红书</h2><p class="location">当前 Edge 的图文草稿</p><strong id="xiaohongshu-state">未开始</strong><p id="xiaohongshu-message"></p></article>
   </section>
-  <section id="recovery" hidden><button id="resume" class="secondary">继续核对本次交付</button><p>关闭本页会暂停浏览器操作，已保存内容与本地任务记录会保留。提交结果未知时只核对，不再次保存。</p></section>
+  <section id="recovery" hidden><button id="resume" class="secondary">继续核对本次交付</button><p>继续核对使用原任务的平台选择。修改上面的勾选仅用于新任务；提交结果未知时只核对，不再次保存。</p></section>
   <footer>小红书草稿保存在当前 Edge profile；清除该网站的浏览器数据仍会删除草稿。本地卡片和文案保留在内容项目中。<br>此入口不包含公开发表、群发或网站部署。<span id="version"></span></footer>
 </main><script type="module" src="dashboard.js"></script></body></html>

@@ -27,36 +27,38 @@ npm run dev
 
 项目协作入口是 [content-distributor](.agents/skills/content-distributor/SKILL.md)。Codex 与 skills 完成创作后，可用 **Edge 的「LUI 三站草稿交付」按钮**统一完成格式适配、存稿和回读核验。
 
-每期内容放在 `content-projects/<文章ID>/`，其中：
+开始创作前先确定本篇目标平台；已明确的平台直接沿用，未明确时先询问，不为未选站提前准备专用稿件。每期内容放在 `content-projects/<文章ID>/`，其中：
 
 - `sources/` 保存原始文章、资料和参考截图。
 - `article.md` 是当前工作稿，`assets/` 放正文附件。
-- `xiaohongshu.json` 保存小红书文案与卡片脚本。
+- `xiaohongshu.json` 保存小红书文案与有序图片文件清单。
+- `xiaohongshu/` 保存通过 `baoyu-xhs-images` 创作的实际图片、逐图提示词，以及本篇选用的原图副本。
 - `platforms/` 保存各平台最新交付稿、预览和回执，包括后台人工编辑过的版本。
 
 完整结构见 [内容项目目录说明](content-projects/README.md)。内容项目默认被 Git 忽略，获取代码仓库后需要先创建或恢复自己的内容项目。
 
 ### 生成与审核
 
-本期项目准备好 `article.md` 和与原稿匹配的 `xiaohongshu.json` 后，在仓库根运行：
+本期项目准备好 `article.md` 和附件后，在仓库根运行；只有要交付小红书时，才需要与原稿匹配的 `xiaohongshu.json`、已通过 skill 完成并审阅的图片和提示词。按钮只交付现成图片，不生图，也没有固定文字卡片兜底：
 
 ```bash
 npm run content:hub
 ```
 
-首次在日常使用的 Edge 加载 [本地扩展](extensions/draft-delivery)，填写本机连接码、Edge profile 备注和小红书账号显示名称。此后点击扩展，选中本期内容，点击 **「交付三站草稿」**；页面分别显示三站结果，只有全部核验成功才显示完成。首次配置步骤见 [内容工作流](docs/content-workflow.md#首次配置-edge-按钮)。
+首次在日常使用的 Edge 加载 [本地扩展](extensions/draft-delivery)，填写本机连接码；选择小红书时再填写 Edge profile 备注和账号显示名称。此后选中本期内容，**勾选需要的平台，点击「交付所选草稿」**。新项目默认不勾选，之后记住本篇在当前 Edge 中的选择。未选站不生成或保存草稿，也不删除既有内容；所选平台全部核验成功才显示完成。首次配置步骤见 [内容工作流](docs/content-workflow.md#首次配置-edge-按钮)。
 
 连接码和任务记录位于被 Git 忽略的 `.content/delivery/`。公众号继续使用本机的 Baoyu 账号/API/SSH 配置；小红书使用当前 Edge profile 的登录与草稿，不再以 Codex 内置浏览器为交付目标。
 
 也可以仅生成本地包、查看账本和预览网站草稿。示例 ID 应替换为实际存在的项目目录名：
 
 ```bash
-npm run content -- prepare gpt-6-astra-model-guidance
+npm run content -- prepare gpt-6-astra-model-guidance --platforms website,wechat
+npm run content -- prepare gpt-6-astra-model-guidance --platforms wechat
 npm run content -- status gpt-6-astra-model-guidance
 npm run content -- preview gpt-6-astra-model-guidance
 ```
 
-`prepare` 输出一个版本化内容包的位置，包含网站稿、公众号 HTML 与封面、小红书文案与卡片；相同输入会复用已有版本。`status` 显示版本记录，`preview` 在 `http://127.0.0.1:4322` 提供网站草稿预览。
+`prepare` 必须用 `--platforms` 明确指定平台，输出所选内容的版本包。相同输入、实际图片和平台组合会复用已有版本。`status` 显示版本记录，包含网站稿的版本可用 `preview` 在 `http://127.0.0.1:4322` 预览。
 
 `prepare` 仍只生成本地内容包；**统一按钮才会继续执行平台存稿**。已有公众号人工稿会先回读保留，工作稿与其来源版本不同会提示合并。小红书保存结果未知时先回读，不重复新增。
 
@@ -91,4 +93,4 @@ npm run content -- preview gpt-6-astra-model-guidance
 - `.content/`：内部版本包、状态、清理回执与恢复材料，无需作为日常创作入口。
 - `scripts/`、`tests/`：内容处理、部署辅助与验证代码。
 
-每期内容以自己的项目说明和平台回执为交付入口。当前按钮的实现与验收见 [统一草稿交付结果](docs/development/2026-09-12-unified-draft-delivery-result.md)，此前的目录整理见 [内容整理记录](docs/development/2026-09-07-three-channel-publishing-result.md)。
+每期内容以自己的项目说明和平台回执为交付入口。当前平台选择功能见 [逐站交付结果](docs/development/2026-09-19-selective-draft-delivery-result.md)，早期按钮验收见 [统一草稿交付结果](docs/development/2026-09-12-unified-draft-delivery-result.md)。

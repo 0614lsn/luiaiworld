@@ -6,12 +6,22 @@ import { parseFrontmatter } from 'astro/markdown';
 import { z } from 'astro/zod';
 import { createSatteriMarkdownProcessor } from '@astrojs/markdown-satteri';
 import { parse, renderSync, ELEMENT_NODE } from 'ultrahtml';
-import { renderCards, renderWechatCover } from './cards.mjs';
+import { renderWechatCover } from './wechat-cover.mjs';
+import { loadXhsImages, deliveryPng } from './xiaohongshu-images.mjs';
 import { proseTypography, blockLanguage } from '../../src/lib/markdown-typography.mjs';
 import { enhanceCodeBlocks } from '../../src/lib/code-copy.mjs';
 
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 export const PLATFORMS = ['website', 'wechat', 'xiaohongshu'];
+export function selectPlatforms(value = PLATFORMS) {
+  if (!Array.isArray(value) || !value.length || value.some(platform => !PLATFORMS.includes(platform)) || new Set(value).size !== value.length) throw new Error('请至少选择一个平台；平台不可重复且只能是 website、wechat、xiaohongshu');
+  return PLATFORMS.filter(platform => value.includes(platform));
+}
+export function releasePlatforms(manifest) {
+  if (manifest.version === 1) return [...PLATFORMS];
+  if (manifest.version !== 2 || !Array.isArray(manifest.selectedPlatforms)) throw new Error('不支持的内容版本清单');
+  return selectPlatforms(manifest.selectedPlatforms);
+}
 export const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 const json = (data) => `${JSON.stringify(data, null, 2)}\n`;
 const safeSlug = (slug) => { if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('文章 ID 只允许小写字母、数字和连字符'); return slug; };
@@ -23,8 +33,11 @@ const postSchema = z.object({
   cover: z.object({ kicker: z.string().max(42), subtitle: z.string().max(62) }).optional(),
   eyebrow: z.string().optional(), contentNote: z.string().optional(),
 });
-const cardSchema = z.object({ layout: z.enum(['body', 'cover']).optional(), kicker: z.string().min(1), heading: z.string().min(1), summary: z.string().min(1), promptLabel: z.string().optional(), prompt: z.string().min(1), note: z.string().min(1) });
-const xhsSchema = z.object({ sourceHash: z.string().regex(/^[a-f0-9]{64}$/), title: z.string().min(1).max(40), caption: z.string().min(1), footerLabel: z.string().max(12).optional(), cards: z.array(cardSchema).min(1).max(18) });
+const xhsImageSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('generated'), path: z.string().min(1), prompt: z.string().min(1), alt: z.string().min(1) }).strict(),
+  z.object({ kind: z.literal('original'), path: z.string().min(1), alt: z.string().min(1) }).strict(),
+]);
+const xhsSchema = z.object({ sourceHash: z.string().regex(/^[a-f0-9]{64}$/), title: z.string().min(1).max(40), caption: z.string().min(1), imageSkill: z.literal('baoyu-xhs-images'), images: z.array(xhsImageSchema).min(1).max(18) }).strict();
 const escape = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function exists(path) { try { await stat(path); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; } }
@@ -62,32 +75,48 @@ async function filesIn(directory) {
   return result;
 }
 
-export async function getInputs(root, slug) {
+export async function getInputs(root, slug, { platforms = PLATFORMS } = {}) {
   safeSlug(slug);
+  const selectedPlatforms = selectPlatforms(platforms);
   const directory = join(root, 'content-projects', slug);
-  const source = await readFile(join(directory, 'article.md'), 'utf8');
+  const sourceBuffer = await readFile(join(directory, 'article.md'));
+  const source = sourceBuffer.toString('utf8');
+  const authoringFiles = new Map([[join(directory, 'article.md'), sourceBuffer]]);
   const parsed = parseFrontmatter(source);
   const metadata = postSchema.parse(parsed.frontmatter);
   if (metadata.source && !metadata.source.url.startsWith('https://')) throw new Error('外部来源须使用 HTTPS URL');
-  const xhs = xhsSchema.parse(await readJson(join(directory, 'xiaohongshu.json')));
-  if (xhs.sourceHash !== sha256(source)) throw new Error('原稿已变化；请重新审阅小红书改写，并更新 sourceHash 后再准备');
+  let xhs, xhsImages = [];
+  if (selectedPlatforms.includes('xiaohongshu')) {
+    const file = join(directory, 'xiaohongshu.json'), buffer = await readFile(file);
+    authoringFiles.set(file, buffer);
+    const candidate = JSON.parse(buffer.toString('utf8'));
+    if (candidate.cards) throw new Error('小红书固定文字卡片模板已移除；请先使用 baoyu-xhs-images 完成图片，并在 xiaohongshu.json 填写 images 文件清单');
+    xhs = xhsSchema.parse(candidate);
+    if (xhs.sourceHash !== sha256(source)) throw new Error('原稿已变化；请重新审阅小红书改写，并更新 sourceHash 后再准备');
+    xhsImages = await loadXhsImages(directory, xhs.images);
+  }
   if (/<\/?(?:script|iframe|form|object|embed)\b/i.test(parsed.content) || /\]\(\s*(?:javascript|file|data):/i.test(parsed.content)) throw new Error('正文包含不支持的可执行 HTML 或链接协议');
   const inputs = {};
   // Sources and platform deliveries belong to the content project, but only
   // authoring inputs affect rendering. A saved API receipt must not invalidate it.
-  for (const file of [join(directory, 'article.md'), join(directory, 'xiaohongshu.json'), ...await filesIn(join(directory, 'assets'))]) {
-    inputs[relative(root, file).split(sep).join('/')] = sha256(await readFile(file));
-  }
-  for (const name of ['scripts/content/core.mjs', 'scripts/content/cards.mjs', 'scripts/content/cli.mjs', 'package-lock.json', 'astro.config.mjs', 'src/content.config.ts']) {
+  if (selectedPlatforms.some(platform => platform !== 'xiaohongshu')) for (const file of await filesIn(join(directory, 'assets'))) authoringFiles.set(file, await readFile(file));
+  for (const [file, buffer] of authoringFiles) inputs[relative(root, file).split(sep).join('/')] = sha256(buffer);
+  for (const image of xhsImages) for (const file of image.files) inputs[relative(root, file.file).split(sep).join('/')] = sha256(file.buffer);
+  const templates = ['scripts/content/core.mjs', 'scripts/content/cli.mjs', 'package-lock.json'];
+  if (selectedPlatforms.includes('wechat')) templates.push('scripts/content/wechat-cover.mjs');
+  if (selectedPlatforms.includes('xiaohongshu')) templates.push('scripts/content/xiaohongshu-images.mjs');
+  if (selectedPlatforms.includes('website')) templates.push('astro.config.mjs', 'src/content.config.ts');
+  if (selectedPlatforms.includes('wechat')) templates.push('src/lib/markdown-typography.mjs', 'src/lib/code-copy.mjs');
+  for (const name of templates) {
     const file = join(root, name);
     if (await exists(file)) inputs[name] = sha256(await readFile(file));
   }
   // Site templates and stylesheet are part of the reviewed representation.
-  for (const folder of ['src/layouts', 'src/components', 'src/styles', 'src/pages', 'src/lib']) {
+  for (const folder of selectedPlatforms.includes('website') ? ['src/layouts', 'src/components', 'src/styles', 'src/pages', 'src/lib'] : []) {
     for (const file of await filesIn(join(root, folder))) inputs[relative(root, file).split(sep).join('/')] = sha256(await readFile(file));
   }
-  const releaseHash = sha256(json({ version: 1, slug, inputs }));
-  return { directory, source, body: parsed.content, metadata, xhs, inputs, releaseHash };
+  const releaseHash = sha256(json({ version: 2, slug, selectedPlatforms, inputs }));
+  return { directory, source, body: parsed.content, metadata, xhs, xhsImages, inputs, releaseHash, selectedPlatforms };
 }
 
 const styles = {
@@ -154,26 +183,30 @@ export async function verifyRelease(root, slug, hash, { current = true } = {}) {
   safeSlug(slug); safeHash(hash);
   const directory = join(root, '.content', 'releases', hash);
   const manifest = await readJson(join(directory, 'manifest.json'));
-  if (manifest.slug !== slug || manifest.releaseHash !== hash || sha256(json({ version: 1, slug, inputs: manifest.inputs })) !== hash) throw new Error('内容版本清单不匹配');
+  const platforms = releasePlatforms(manifest);
+  const identity = manifest.version === 1 ? { version: 1, slug, inputs: manifest.inputs } : { version: 2, slug, selectedPlatforms: platforms, inputs: manifest.inputs };
+  if (manifest.slug !== slug || manifest.releaseHash !== hash || sha256(json(identity)) !== hash) throw new Error('内容版本清单不匹配');
   const present = (await filesIn(directory)).map((file) => relative(directory, file).split(sep).join('/')).filter((file) => file !== 'manifest.json').sort();
   if (json(present) !== json(Object.keys(manifest.artifacts).sort())) throw new Error('产物文件清单已变化，请保留人工修改并重新整理输入');
   for (const [file, digest] of Object.entries(manifest.artifacts)) {
+    if (manifest.version === 2 && !platforms.includes(file.split('/')[0])) throw new Error('产物包含未选择的平台');
     const path = resolve(directory, file);
     if (!path.startsWith(`${resolve(directory)}${sep}`) || sha256(await readFile(path)) !== digest) throw new Error(`产物已被修改：${file}；保留人工修改，重新整理输入并生成新版本`);
   }
-  if (current && (await getInputs(root, slug)).releaseHash !== hash) throw new Error('当前输入或模板已变化，旧版本不可继续登记批准或提交结果');
+  if (current && (await getInputs(root, slug, { platforms })).releaseHash !== hash) throw new Error('当前输入或模板已变化，旧版本不可继续登记批准或提交结果');
   return { directory, manifest };
 }
 
-export async function prepare(root, slug) {
+export async function prepare(root, slug, { platforms = PLATFORMS } = {}) {
   return withLock(root, slug, async () => {
-    const input = await getInputs(root, slug);
+    const input = await getInputs(root, slug, { platforms });
+    const selected = input.selectedPlatforms;
     const finalDirectory = join(root, '.content', 'releases', input.releaseHash);
     const selectRelease = async () => {
       const path = join(root, '.content', 'state', `${slug}.json`);
       const state = await exists(path) ? await readJson(path) : { version: 1, slug, releases: {} };
       state.currentRelease = input.releaseHash;
-      state.releases[input.releaseHash] ??= { platforms: Object.fromEntries(PLATFORMS.map((platform) => [platform, { stage: 'local_ready', updatedAt: new Date().toISOString() }])), events: [] };
+      state.releases[input.releaseHash] ??= { selectedPlatforms: selected, platforms: Object.fromEntries(PLATFORMS.map((platform) => [platform, { stage: selected.includes(platform) ? 'local_ready' : 'skipped', updatedAt: new Date().toISOString() }])), events: [] };
       await atomicJson(path, state);
     };
     if (await exists(finalDirectory)) {
@@ -189,31 +222,38 @@ export async function prepare(root, slug) {
     const artifacts = {};
     const put = async (name, value) => { const path = join(temp, name); await mkdir(dirname(path), { recursive: true }); await writeFile(path, value, { flag: 'wx' }); artifacts[name] = sha256(value); };
     try {
-      const processor = await createSatteriMarkdownProcessor({
-        syntaxHighlight: { type: 'shiki', excludeLangs: ['text', 'plaintext'] },
-        shikiConfig: { theme: 'github-light', wrap: true },
-        hastPlugins: [proseTypography, blockLanguage],
-      });
-      const rendered = await processor.render(input.body);
-      for (const image of rendered.metadata.localImagePaths) {
-        if (!image.startsWith('assets/') || image.split(/[\\/]/).includes('..') || !await exists(join(input.directory, image))) throw new Error(`本地图片必须存在于本篇 assets/：${image}`);
+      let rendered;
+      if (selected.some(platform => platform !== 'xiaohongshu')) {
+        const processor = await createSatteriMarkdownProcessor({
+          syntaxHighlight: { type: 'shiki', excludeLangs: ['text', 'plaintext'] },
+          shikiConfig: { theme: 'github-light', wrap: true },
+          hastPlugins: [proseTypography, blockLanguage],
+        });
+        rendered = await processor.render(input.body);
+        for (const image of rendered.metadata.localImagePaths) {
+          if (!image.startsWith('assets/') || image.split(/[\\/]/).includes('..') || !await exists(join(input.directory, image))) throw new Error(`本地图片必须存在于本篇 assets/：${image}`);
+        }
       }
-      const sourceNote = input.metadata.source ? `<p>来源：<a href="${escape(input.metadata.source.url)}">${escape(input.metadata.source.label)}</a>。来源核对日期：${escape(input.metadata.source.checkedAt)}。</p>` : '';
-      const wechat = inlineWechat(`<h1>${escape(input.metadata.title)}</h1>${sourceNote}${rendered.code}`);
-      await put(`website/${slug}.md`, input.source);
-      await put('wechat/body.html', wechat);
-      await put('wechat/preview.html', previewHtml(input.metadata.title, wechat));
-      await put('wechat/cover.png', await renderWechatCover(input.metadata.title, input.metadata.cover));
-      await put('wechat/instructions.txt', '正文见 body.html；preview.html 可在本地浏览器预览。封面 cover.png。请在平台后台粘贴富文本并核对全部提示词、图片和来源。此导出不代表已保存平台草稿；发表与群发是不同动作，本工作流不群发。\n');
-      await put('xiaohongshu/caption.txt', `${input.xhs.title}\n\n${input.xhs.caption}\n`);
-      await put('xiaohongshu/post.json', json({ title: input.xhs.title, caption: input.xhs.caption, sourceHash: sha256(input.source) }));
-      for (const card of await renderCards(input.xhs.cards, input.xhs.footerLabel)) await put(`xiaohongshu/cards/${card.name}`, card.buffer);
-      for (const file of await filesIn(join(input.directory, 'assets'))) {
+      if (selected.includes('website')) await put(`website/${slug}.md`, input.source);
+      if (selected.includes('wechat')) {
+        const sourceNote = input.metadata.source ? `<p>来源：<a href="${escape(input.metadata.source.url)}">${escape(input.metadata.source.label)}</a>。来源核对日期：${escape(input.metadata.source.checkedAt)}。</p>` : '';
+        const wechat = inlineWechat(`<h1>${escape(input.metadata.title)}</h1>${sourceNote}${rendered.code}`);
+        await put('wechat/body.html', wechat);
+        await put('wechat/preview.html', previewHtml(input.metadata.title, wechat));
+        await put('wechat/cover.png', await renderWechatCover(input.metadata.title, input.metadata.cover));
+        await put('wechat/instructions.txt', '正文见 body.html；preview.html 可在本地浏览器预览。封面 cover.png。请在平台后台粘贴富文本并核对全部提示词、图片和来源。此导出不代表已保存平台草稿；发表与群发是不同动作，本工作流不群发。\n');
+      }
+      if (selected.includes('xiaohongshu')) {
+        await put('xiaohongshu/caption.txt', `${input.xhs.title}\n\n${input.xhs.caption}\n`);
+        await put('xiaohongshu/post.json', json({ title: input.xhs.title, caption: input.xhs.caption, sourceHash: sha256(input.source) }));
+        for (const [index, image] of input.xhsImages.entries()) await put(`xiaohongshu/cards/${String(index + 1).padStart(2, '0')}.png`, await deliveryPng(image));
+      }
+      for (const file of selected.some(platform => platform !== 'xiaohongshu') ? await filesIn(join(input.directory, 'assets')) : []) {
         const asset = relative(join(input.directory, 'assets'), file).split(sep).join('/');
         const buffer = await readFile(file);
-        await put(`website/assets/${asset}`, buffer); await put(`wechat/assets/${asset}`, buffer);
+        for (const platform of selected.filter(platform => platform !== 'xiaohongshu')) await put(`${platform}/assets/${asset}`, buffer);
       }
-      const manifest = { version: 1, slug, releaseHash: input.releaseHash, sourceHash: sha256(input.source), title: input.metadata.title, source: input.metadata.source, createdAt: new Date().toISOString(), inputs: input.inputs, artifacts };
+      const manifest = { version: 2, slug, selectedPlatforms: selected, releaseHash: input.releaseHash, sourceHash: sha256(input.source), title: input.metadata.title, source: input.metadata.source, createdAt: new Date().toISOString(), inputs: input.inputs, artifacts };
       await atomicJson(join(temp, 'manifest.json'), manifest);
       await selectRelease();
       return { releaseHash: input.releaseHash, directory: finalDirectory, reused: false };
@@ -246,6 +286,7 @@ export async function record(root, slug, options) {
     // attempts must still refer to the current, reviewed inputs.
     const historicalReceipt = stage === 'published' || (resolution && ['draft_saved', 'review_pending', 'blocked'].includes(stage));
     const { manifest } = await verifyRelease(root, slug, hash, { current: !historicalReceipt });
+    if (!releasePlatforms(manifest).includes(platform)) throw new Error('该内容包未选择此平台，不能登记交付');
     const path = join(root, '.content', 'state', `${slug}.json`);
     const state = await readJson(path);
     const release = state.releases[hash];

@@ -4,11 +4,15 @@ const CLIENT_VERSION = chrome.runtime.getManifest().version;
 $('version').textContent = ` · 扩展 ${CLIENT_VERSION}`;
 const API = 'http://127.0.0.1:4389';
 const CREATOR = 'https://creator.xiaohongshu.com/publish/publish?from=menu&target=image';
-const labels = { queued: '等待适配', preparing: '正在处理', awaiting_browser: '等待 Edge', submission_unknown: '保存结果待核实', draft_saved: '草稿已核实', failed: '尚未完成', blocked: '需要处理', needs_merge: '需要合并人工修改', needs_account_check: '需要核对账号', verification_failed: '内容核验未通过', missing_draft: '旧草稿已不在草稿箱' };
-let settings = await chrome.storage.local.get(['token', 'instanceId', 'profileLabel', 'account', 'jobId', 'inspectionTab', 'inspectionJobId']);
+const platformNames = { website: '个人网站', wechat: '微信公众号', xiaohongshu: '小红书' };
+const choices = [...document.querySelectorAll('input[name="platform"]')];
+const selection = () => choices.filter(input => input.checked).map(input => input.value);
+const jobSelection = job => job.selectedPlatforms ?? Object.keys(platformNames);
+const labels = { skipped: '本次未选择', queued: '等待适配', preparing: '正在处理', awaiting_browser: '等待 Edge', submission_unknown: '保存结果待核实', draft_saved: '草稿已核实', failed: '尚未完成', blocked: '需要处理', needs_merge: '需要合并人工修改', needs_account_check: '需要核对账号', verification_failed: '内容核验未通过', missing_draft: '旧草稿已不在草稿箱' };
+let settings = await chrome.storage.local.get(['token', 'instanceId', 'profileLabel', 'account', 'jobId', 'inspectionTab', 'inspectionJobId', 'selectedProject', 'platformSelections']);
 await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
 if (!settings.instanceId) { settings.instanceId = crypto.randomUUID(); await chrome.storage.local.set({ instanceId: settings.instanceId }); }
-let running = false, current = null;
+let running = false, connected = false, current = null, projects = [];
 $('profile').value = settings.profileLabel || '';
 $('account').value = settings.account || '';
 $('token').value = settings.token || '';
@@ -17,28 +21,54 @@ async function api(path, value) {
   const data = await response.json(); if (!response.ok) throw new Error(data.error || '本地服务请求失败'); return data;
 }
 function message(text) { $('notice').textContent = text; }
+function updateSelection() {
+  const selected = selection(), project = projects.find(p => p.id === $('project').value);
+  const unavailable = selected.filter(platform => !project?.availability?.[platform]?.ready);
+  const needsAccount = selected.includes('xiaohongshu') && (!settings.account || !settings.profileLabel);
+  $('account').required = $('profile').required = selected.includes('xiaohongshu');
+  $('deliver').disabled = running || !connected || !selected.length || unavailable.length > 0 || needsAccount;
+  $('project').disabled = running; $('platform-choice').disabled = running;
+  $('selection-status').textContent = !selected.length ? '请至少选择一个平台。' : unavailable.length ? unavailable.map(platform => `${platformNames[platform]}：${project?.availability?.[platform]?.message || '写作稿待补齐'}`).join('；') : needsAccount ? '选择小红书需要先在连接设置中填写 Edge profile 备注和账号显示名称。' : `本次将交付：${selected.map(platform => platformNames[platform]).join('、')}。`;
+}
+function restoreSelection() {
+  const saved = settings.platformSelections?.[$('project').value] ?? [];
+  for (const input of choices) input.checked = saved.includes(input.value);
+  updateSelection();
+}
+async function rememberSelection() {
+  settings.selectedProject = $('project').value;
+  settings.platformSelections = { ...settings.platformSelections, [settings.selectedProject]: selection() };
+  await chrome.storage.local.set({ selectedProject: settings.selectedProject, platformSelections: settings.platformSelections });
+}
 function render(job) {
   current = job;
   for (const [name, row] of Object.entries(job.platforms)) { $(name + '-state').textContent = labels[row.stage] || row.stage; $(name + '-message').textContent = row.message || ''; }
   $('recovery').hidden = job.status === 'complete' || running;
-  if (job.status === 'complete') message('三站草稿已交付并核实。可以开始人工审核；没有公开发表。');
+  $('task-platforms').hidden = false;
+  $('task-platforms').textContent = `当前任务：${job.slug} · ${jobSelection(job).map(platform => platformNames[platform]).join('、')}`;
+  if (job.status === 'complete') message('所选平台的草稿已交付并核实。可以开始人工审核；没有公开发表。');
 }
 async function connect() {
   await api('/health');
-  const projects = await api('/projects');
+  projects = await api('/projects');
+  if (projects.some(p => !p.availability)) throw new Error('请重启本地服务以使用平台选择');
+  connected = true;
   $('project').replaceChildren();
   for (const p of projects) { const option = document.createElement('option'); option.value = p.id; option.textContent = `${p.title}${p.ready ? '' : ' · 写作稿待补齐'}`; option.disabled = !p.ready; $('project').append(option); }
-  $('deliver').disabled = !projects.some(p => p.ready);
+  if (projects.some(p => p.id === settings.selectedProject)) $('project').value = settings.selectedProject;
+  restoreSelection();
   $('connection').textContent = '已连接本机服务'; $('setup').open = false;
-  message(`小红书交付位置：Edge · ${settings.profileLabel} · ${settings.account}`);
+  message('已连接。请选择本篇需要交付的平台；仅保存草稿，不公开发表。');
   if (settings.jobId) { try { render(await api(`/jobs/${settings.jobId}`)); } catch { /* An old local job may have been archived. */ } }
 }
 $('connect-form').addEventListener('submit', async event => {
   event.preventDefault();
   settings = { ...settings, token: $('token').value.trim(), profileLabel: $('profile').value.trim(), account: $('account').value.trim() };
   await chrome.storage.local.set(settings);
-  try { await connect(); } catch { $('connection').textContent = '连接失败，请确认服务已启动、连接码正确'; }
+  try { await connect(); } catch (error) { connected = false; updateSelection(); $('connection').textContent = `连接失败：${error.message}`; }
 });
+$('project').addEventListener('change', async () => { restoreSelection(); await rememberSelection(); });
+for (const input of choices) input.addEventListener('change', async () => { updateSelection(); await rememberSelection(); });
 async function page(tabId, operation, job, extra = {}, navigating = false) {
   const data = { ...job.xhs, account: job.target.account, ...extra };
   const readOnly = ['find','read'].includes(operation);
@@ -97,6 +127,7 @@ async function localFiles(job) {
   return files;
 }
 async function deliverXhs(job) {
+  if (!jobSelection(job).includes('xiaohongshu')) throw new Error('本任务未选择小红书');
   if (job.target.instanceId !== settings.instanceId || job.target.account !== settings.account) throw new Error('任务属于其他 Edge profile 或账号，请使用原连接设置');
   const files = await localFiles(job);
   // Reuse our own upload/list page. Never navigate away from an editor the user
@@ -131,13 +162,13 @@ async function deliverXhs(job) {
   return api(`/jobs/${job.id}/complete`, { instanceId: settings.instanceId, proof: { ...await readFound(tab.id, job, saved, files), attemptId: permit.attemptId } });
 }
 async function run(job) {
-  running = true; $('deliver').disabled = true; $('resume').disabled = true; $('recovery').hidden = true;
+  running = true; updateSelection(); $('resume').disabled = true; $('recovery').hidden = true;
   settings.jobId = job.id; await chrome.storage.local.set({ jobId: job.id });
   let browserHandled = false;
   try {
     for (;;) {
       job = await api(`/jobs/${job.id}`); render(job);
-      if (!browserHandled && job.xhs && ['awaiting_browser', 'submission_unknown'].includes(job.platforms.xiaohongshu.stage)) {
+      if (jobSelection(job).includes('xiaohongshu') && !browserHandled && job.xhs && ['awaiting_browser', 'submission_unknown'].includes(job.platforms.xiaohongshu.stage)) {
         browserHandled = true;
         try { job = await deliverXhs(job); render(job); }
         catch (error) { job = await api(`/jobs/${job.id}/problem`, { instanceId: settings.instanceId, message: error.message, imageEvidence:error.imageEvidence }); render(job); }
@@ -147,17 +178,23 @@ async function run(job) {
     }
     if (job.status !== 'complete') message('本次交付还有待处理项。已成功的草稿保留；请查看各平台说明。');
   } catch { message('与本地服务的连接中断。请保留小红书页面，重新连接后继续核对；不要再次手动保存同一份内容。'); }
-  finally { running = false; $('deliver').disabled = false; $('resume').disabled = false; if (current) render(current); }
+  finally { running = false; updateSelection(); $('resume').disabled = false; if (current) render(current); }
 }
 $('deliver').addEventListener('click', async () => {
-  if (running || !$('project').value) return;
-  $('deliver').disabled = true;
-  try { await run(await api('/deliver', { slug: $('project').value, target: { browser: 'edge', instanceId: settings.instanceId, profileLabel: settings.profileLabel, account: settings.account } })); }
-  catch (error) { message(error.message); $('deliver').disabled = false; }
+  if (running || $('deliver').disabled || !$('project').value) return;
+  const selectedPlatforms = selection();
+  const payload = { slug: $('project').value, selectedPlatforms, target: selectedPlatforms.includes('xiaohongshu') ? { browser: 'edge', instanceId: settings.instanceId, profileLabel: settings.profileLabel, account: settings.account } : null };
+  running = true; updateSelection(); $('resume').disabled = true;
+  try { await rememberSelection(); await run(await api('/deliver', payload)); }
+  catch (error) { message(error.message); }
+  finally { running = false; updateSelection(); $('resume').disabled = false; }
 });
 $('resume').addEventListener('click', async () => {
   if (running || !current) return;
-  try { await run(await api(`/jobs/${current.id}/resume`, { instanceId: settings.instanceId })); } catch (error) { message(error.message); }
+  const id = current.id, instanceId = settings.instanceId;
+  running = true; updateSelection(); $('resume').disabled = true;
+  try { await run(await api(`/jobs/${id}/resume`, { instanceId })); } catch (error) { message(error.message); }
+  finally { running = false; updateSelection(); $('resume').disabled = false; }
 });
-if (settings.token && settings.account && settings.profileLabel) { try { await connect(); } catch { $('setup').open = true; message('本地服务尚未启动。请运行 npm run content:hub，然后重新连接。'); } }
+if (settings.token) { try { await connect(); } catch (error) { connected = false; updateSelection(); $('setup').open = true; message(`本地服务连接失败：${error.message}。请运行 npm run content:hub，然后重新连接。`); } }
 else $('setup').open = true;

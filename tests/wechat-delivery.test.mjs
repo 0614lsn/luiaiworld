@@ -14,11 +14,9 @@ async function fixture(t) {
   const target = join(directory, 'platforms', 'wechat');
   await mkdir(target, { recursive: true });
   const article = '---\ntitle: 测试交付\ndescription: 测试说明\npublishedAt: 2026-09-12\ntags: [测试]\nfeatured: false\nstatus: draft\n---\n\n## 正文\n\n[资料](https://example.test/a) 和 [另一处](https://example.test/a)。\n\n```text\n保持完整提示词 <tag>\n```\n';
-  const cards = { sourceHash: sha256(article), title: '测试', caption: '正文', cards: [{ kicker: '测试', heading: '测试', summary: '说明', prompt: '提示词', note: '来源' }] };
   await writeFile(join(directory, 'article.md'), article);
-  await writeFile(join(directory, 'xiaohongshu.json'), JSON.stringify(cards));
-  const release = await prepare(root, slug);
-  return { root, slug, directory, target, release: release.releaseHash, article, cards };
+  const release = await prepare(root, slug, { platforms: ['wechat'] });
+  return { root, slug, directory, target, release: release.releaseHash, article };
 }
 const json = async (file) => JSON.parse(await readFile(file, 'utf8'));
 const transport = (overrides = {}) => ({ accountKey: 'test-account', defaults: { default_author: '作者' }, upload: async () => ({ media_id: 'cover', url: 'https://mmbiz.qpic.cn/test' }), ...overrides });
@@ -44,8 +42,7 @@ test('existing manual draft is preserved, with source baseline migration and cha
   assert.equal(await readFile(join(f.target, 'body.html'), 'utf8'), '<p>人工修改</p>');
   const changed = f.article + '\n新的内容\n';
   await writeFile(join(f.directory, 'article.md'), changed);
-  await writeFile(join(f.directory, 'xiaohongshu.json'), JSON.stringify({ ...f.cards, sourceHash: sha256(changed) }));
-  const next = await prepare(f.root, f.slug);
+  const next = await prepare(f.root, f.slug, { platforms: ['wechat'] });
   const refused = await deliverWechat(f.root, f.slug, next.releaseHash, api);
   assert.equal(refused.success, false); assert.equal(refused.stage, 'needs_merge');
   assert.deepEqual(calls, ['draft/get', 'draft/get']);
