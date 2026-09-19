@@ -498,6 +498,10 @@ main {
   overflow-wrap: anywhere;
 }
 
+.article-content img {
+  height: auto;
+}
+
 .article-content > p {
   margin: 0 0 1.5em;
 }
